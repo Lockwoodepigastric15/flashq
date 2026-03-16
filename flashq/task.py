@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from flashq.app import FlashQ
+    from flashq.canvas import Signature
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,48 @@ class Task(Generic[P, R]):
         Returns a :class:`TaskHandle` for tracking the task.
         """
         return self.apply(args=args, kwargs=kwargs)
+
+    def s(self, *args: Any, **kwargs: Any) -> Signature:
+        """Create a :class:`~flashq.canvas.Signature` for use in chains/groups.
+
+        Example::
+
+            add.s(2, 3)  # Signature(task_name='add', args=(2, 3))
+        """
+        from flashq.canvas import Signature
+
+        return Signature(
+            task_name=self.name,
+            args=args,
+            kwargs=kwargs,
+            immutable=False,
+            options={
+                "queue": self.queue,
+                "priority": self.priority,
+                "max_retries": self.max_retries,
+            },
+        )
+
+    def si(self, *args: Any, **kwargs: Any) -> Signature:
+        """Create an *immutable* signature (ignores previous task result).
+
+        Example::
+
+            multiply.si(10, 5)  # Always gets (10, 5), never prepended
+        """
+        from flashq.canvas import Signature
+
+        return Signature(
+            task_name=self.name,
+            args=args,
+            kwargs=kwargs,
+            immutable=True,
+            options={
+                "queue": self.queue,
+                "priority": self.priority,
+                "max_retries": self.max_retries,
+            },
+        )
 
     def apply(
         self,

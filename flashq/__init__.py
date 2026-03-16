@@ -24,6 +24,18 @@ from __future__ import annotations
 
 from flashq._version import __version__
 from flashq.app import FlashQ
+from flashq.canvas import (
+    Chain,
+    ChainHandle,
+    Chord,
+    ChordHandle,
+    Group,
+    GroupHandle,
+    Signature,
+    chain,
+    chord,
+    group,
+)
 from flashq.enums import TaskPriority, TaskState
 from flashq.exceptions import (
     BackendError,
@@ -42,18 +54,21 @@ from flashq.task import Task, TaskHandle
 
 __all__ = [
     "BackendError",
+    "Chain",
+    "ChainHandle",
+    "Chord",
+    "ChordHandle",
     "CronSchedule",
     "DuplicateTaskError",
-    # Core
     "FlashQ",
-    # Exceptions
     "FlashQError",
+    "Group",
+    "GroupHandle",
     "IntervalSchedule",
-    # Middleware
     "Middleware",
-    # Scheduler
     "Scheduler",
     "SerializationError",
+    "Signature",
     "Task",
     "TaskHandle",
     "TaskMessage",
@@ -61,12 +76,13 @@ __all__ = [
     "TaskPriority",
     "TaskResult",
     "TaskRetryError",
-    # Enums
     "TaskState",
     "TaskTimeoutError",
     "WorkerShutdownError",
-    # Meta
     "__version__",
+    "chain",
+    "chord",
     "cron",
     "every",
+    "group",
 ]
