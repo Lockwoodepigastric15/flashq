@@ -40,6 +40,7 @@ def _run_worker(app, duration=2.0, **kwargs):
 # Signature
 # ---------------------------------------------------------------------------
 
+
 class TestSignature:
     def test_create_signature(self, app):
         @app.task(name="add")
@@ -131,6 +132,7 @@ class TestSignature:
 # Group
 # ---------------------------------------------------------------------------
 
+
 class TestGroup:
     def test_group_dispatch(self, app, backend):
         @app.task(name="group_task")
@@ -204,6 +206,7 @@ class TestGroup:
 # Chain
 # ---------------------------------------------------------------------------
 
+
 class TestChain:
     def test_chain_creation(self, app):
         @app.task(name="step_a")
@@ -239,6 +242,7 @@ class TestChain:
 # ---------------------------------------------------------------------------
 # Chord
 # ---------------------------------------------------------------------------
+
 
 class TestChord:
     def test_chord_creation(self, app):
@@ -280,6 +284,7 @@ class TestChord:
 # ---------------------------------------------------------------------------
 # Convenience functions
 # ---------------------------------------------------------------------------
+
 
 class TestConvenienceFunctions:
     def test_chain_function(self, app):

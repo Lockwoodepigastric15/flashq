@@ -18,10 +18,20 @@ class TestBaseBackendInterface:
 
     def test_required_methods(self):
         methods = [
-            "setup", "teardown", "enqueue", "dequeue", "get_task",
-            "update_task_state", "store_result", "get_result",
-            "queue_size", "flush_queue", "add_to_schedule",
-            "read_schedule", "schedule_size", "get_tasks_by_state",
+            "setup",
+            "teardown",
+            "enqueue",
+            "dequeue",
+            "get_task",
+            "update_task_state",
+            "store_result",
+            "get_result",
+            "queue_size",
+            "flush_queue",
+            "add_to_schedule",
+            "read_schedule",
+            "schedule_size",
+            "get_tasks_by_state",
             "delete_result",
         ]
         for method in methods:
@@ -33,19 +43,31 @@ class TestPostgresBackendStructure:
 
     def test_import(self):
         from flashq.backends.postgres import PostgresBackend
+
         assert PostgresBackend is not None
 
     def test_subclass_of_base(self):
         from flashq.backends.postgres import PostgresBackend
+
         assert issubclass(PostgresBackend, BaseBackend)
 
     def test_has_all_methods(self):
         from flashq.backends.postgres import PostgresBackend
+
         methods = [
-            "setup", "teardown", "enqueue", "dequeue", "get_task",
-            "update_task_state", "store_result", "get_result",
-            "queue_size", "flush_queue", "add_to_schedule",
-            "read_schedule", "schedule_size",
+            "setup",
+            "teardown",
+            "enqueue",
+            "dequeue",
+            "get_task",
+            "update_task_state",
+            "store_result",
+            "get_result",
+            "queue_size",
+            "flush_queue",
+            "add_to_schedule",
+            "read_schedule",
+            "schedule_size",
         ]
         for method in methods:
             assert hasattr(PostgresBackend, method), f"Missing: {method}"
@@ -57,19 +79,31 @@ class TestRedisBackendStructure:
 
     def test_import(self):
         from flashq.backends.redis import RedisBackend
+
         assert RedisBackend is not None
 
     def test_subclass_of_base(self):
         from flashq.backends.redis import RedisBackend
+
         assert issubclass(RedisBackend, BaseBackend)
 
     def test_has_all_methods(self):
         from flashq.backends.redis import RedisBackend
+
         methods = [
-            "setup", "teardown", "enqueue", "dequeue", "get_task",
-            "update_task_state", "store_result", "get_result",
-            "queue_size", "flush_queue", "add_to_schedule",
-            "read_schedule", "schedule_size",
+            "setup",
+            "teardown",
+            "enqueue",
+            "dequeue",
+            "get_task",
+            "update_task_state",
+            "store_result",
+            "get_result",
+            "queue_size",
+            "flush_queue",
+            "add_to_schedule",
+            "read_schedule",
+            "schedule_size",
         ]
         for method in methods:
             assert hasattr(RedisBackend, method), f"Missing: {method}"
@@ -82,6 +116,7 @@ class TestSQLiteBackendEdgeCases:
     @pytest.fixture
     def backend(self, tmp_path):
         from flashq.backends.sqlite import SQLiteBackend
+
         b = SQLiteBackend(path=str(tmp_path / "edge_test.db"))
         b.setup()
         yield b
@@ -101,6 +136,7 @@ class TestSQLiteBackendEdgeCases:
     def test_eta_filtering(self, backend):
         """Tasks with future ETA shouldn't be dequeued."""
         import datetime
+
         future = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
         msg = TaskMessage(task_name="future_task", eta=future)
         backend.enqueue(msg)
@@ -111,6 +147,7 @@ class TestSQLiteBackendEdgeCases:
     def test_past_eta_dequeued(self, backend):
         """Tasks with past ETA should be dequeued."""
         import datetime
+
         past = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=10)
         msg = TaskMessage(task_name="past_task", eta=past)
         backend.enqueue(msg)

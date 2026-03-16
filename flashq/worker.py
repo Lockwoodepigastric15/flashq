@@ -94,7 +94,10 @@ class Worker:
 
         logger.info(
             "Worker %r started | queues=%s | concurrency=%d | poll=%.1fs",
-            self.name, self.queues, self.concurrency, self.poll_interval,
+            self.name,
+            self.queues,
+            self.concurrency,
+            self.poll_interval,
         )
         self._print_banner()
         self.app.middleware.on_worker_start()
@@ -121,7 +124,9 @@ class Worker:
 
         logger.info(
             "Worker %r stopped | processed=%d failed=%d",
-            self.name, self._tasks_processed, self._tasks_failed,
+            self.name,
+            self._tasks_processed,
+            self._tasks_failed,
         )
         if self._executor:
             self._executor.shutdown(wait=True, cancel_futures=False)
@@ -176,8 +181,10 @@ class Worker:
         except TaskNotFoundError:
             logger.error("Unknown task: %s (id=%s)", message.task_name, message.id)
             self._store_failure(
-                message, error=f"TaskNotFoundError: {message.task_name}",
-                traceback_str=None, started_at=started_at,
+                message,
+                error=f"TaskNotFoundError: {message.task_name}",
+                traceback_str=None,
+                started_at=started_at,
             )
             return
 
@@ -191,8 +198,10 @@ class Worker:
 
         logger.info(
             "Executing %s [%s] retry=%d/%d",
-            message.task_name, message.id[:8],
-            message.retries, message.max_retries,
+            message.task_name,
+            message.id[:8],
+            message.retries,
+            message.max_retries,
         )
 
         try:
@@ -210,17 +219,26 @@ class Worker:
 
         except TaskTimeoutError:
             self._tasks_failed += 1
-            tb_str = f"TaskTimeoutError: Task {message.task_name} exceeded {message.timeout}s timeout"
-            logger.error("Task %s [%s] timed out after %ss",
-                         message.task_name, message.id[:8], message.timeout)
+            tb_str = (
+                f"TaskTimeoutError: Task {message.task_name} exceeded {message.timeout}s timeout"
+            )
+            logger.error(
+                "Task %s [%s] timed out after %ss",
+                message.task_name,
+                message.id[:8],
+                message.timeout,
+            )
 
             if message.retries < message.max_retries:
                 self._handle_retry(message, started_at=started_at)
             else:
                 mw.on_dead(message, TaskTimeoutError(message.id, message.timeout or 0))
                 self._store_failure(
-                    message, error=tb_str, traceback_str=tb_str,
-                    started_at=started_at, state=TaskState.DEAD,
+                    message,
+                    error=tb_str,
+                    traceback_str=tb_str,
+                    started_at=started_at,
+                    state=TaskState.DEAD,
                 )
 
         except TaskRetryError:
@@ -243,11 +261,16 @@ class Worker:
                 mw.on_dead(message, exc)
                 logger.error(
                     "Task %s [%s] dead after %d retries",
-                    message.task_name, message.id[:8], message.max_retries,
+                    message.task_name,
+                    message.id[:8],
+                    message.max_retries,
                 )
                 self._store_failure(
-                    message, error=str(exc), traceback_str=tb_str,
-                    started_at=started_at, state=TaskState.DEAD,
+                    message,
+                    error=str(exc),
+                    traceback_str=tb_str,
+                    started_at=started_at,
+                    state=TaskState.DEAD,
                 )
 
     def _run_async(self, fn, message: TaskMessage) -> Any:
@@ -286,45 +309,75 @@ class Worker:
             executor.shutdown(wait=False)
 
     def _store_success(
-        self, message: TaskMessage, *, result: Any,
+        self,
+        message: TaskMessage,
+        *,
+        result: Any,
         started_at: datetime.datetime,
     ) -> None:
         completed_at = datetime.datetime.now(datetime.timezone.utc)
         runtime_ms = (completed_at - started_at).total_seconds() * 1000
 
         self.app.backend.update_task_state(message.id, TaskState.SUCCESS)
-        self.app.backend.store_result(TaskResult(
-            task_id=message.id, state=TaskState.SUCCESS, result=result,
-            started_at=started_at, completed_at=completed_at, runtime_ms=runtime_ms,
-        ))
+        self.app.backend.store_result(
+            TaskResult(
+                task_id=message.id,
+                state=TaskState.SUCCESS,
+                result=result,
+                started_at=started_at,
+                completed_at=completed_at,
+                runtime_ms=runtime_ms,
+            )
+        )
         logger.info("Task %s [%s] done in %.0fms", message.task_name, message.id[:8], runtime_ms)
 
     def _store_failure(
-        self, message: TaskMessage, *, error: str,
-        traceback_str: str | None, started_at: datetime.datetime,
+        self,
+        message: TaskMessage,
+        *,
+        error: str,
+        traceback_str: str | None,
+        started_at: datetime.datetime,
         state: TaskState = TaskState.FAILURE,
     ) -> None:
         completed_at = datetime.datetime.now(datetime.timezone.utc)
         runtime_ms = (completed_at - started_at).total_seconds() * 1000
 
         self.app.backend.update_task_state(message.id, state)
-        self.app.backend.store_result(TaskResult(
-            task_id=message.id, state=state, error=error, traceback=traceback_str,
-            started_at=started_at, completed_at=completed_at, runtime_ms=runtime_ms,
-        ))
+        self.app.backend.store_result(
+            TaskResult(
+                task_id=message.id,
+                state=state,
+                error=error,
+                traceback=traceback_str,
+                started_at=started_at,
+                completed_at=completed_at,
+                runtime_ms=runtime_ms,
+            )
+        )
 
     def _handle_retry(
-        self, message: TaskMessage,
+        self,
+        message: TaskMessage,
         exc: Exception | None = None,
-        *, started_at: datetime.datetime,
+        *,
+        started_at: datetime.datetime,
     ) -> None:
         retry_count = message.retries + 1
-        delay = message.retry_delay * (2 ** message.retries) if message.retry_backoff else message.retry_delay
+        delay = (
+            message.retry_delay * (2**message.retries)
+            if message.retry_backoff
+            else message.retry_delay
+        )
         eta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=delay)
 
         logger.warning(
             "Retrying %s [%s] in %.0fs (%d/%d)",
-            message.task_name, message.id[:8], delay, retry_count, message.max_retries,
+            message.task_name,
+            message.id[:8],
+            delay,
+            retry_count,
+            message.max_retries,
         )
 
         retry_message = TaskMessage(
@@ -364,12 +417,20 @@ class Worker:
         due_tasks = self.app.backend.read_schedule(now)
         for msg in due_tasks:
             immediate = TaskMessage(
-                id=msg.id, task_name=msg.task_name, queue=msg.queue,
-                args=msg.args, kwargs=msg.kwargs, priority=msg.priority,
-                state=TaskState.PENDING, retries=msg.retries,
-                max_retries=msg.max_retries, retry_delay=msg.retry_delay,
-                retry_backoff=msg.retry_backoff, timeout=msg.timeout,
-                created_at=msg.created_at, result_ttl=msg.result_ttl,
+                id=msg.id,
+                task_name=msg.task_name,
+                queue=msg.queue,
+                args=msg.args,
+                kwargs=msg.kwargs,
+                priority=msg.priority,
+                state=TaskState.PENDING,
+                retries=msg.retries,
+                max_retries=msg.max_retries,
+                retry_delay=msg.retry_delay,
+                retry_backoff=msg.retry_backoff,
+                timeout=msg.timeout,
+                created_at=msg.created_at,
+                result_ttl=msg.result_ttl,
             )
             self.app.backend.enqueue(immediate)
 
@@ -408,13 +469,16 @@ class Worker:
         if len(tasks) > 10:
             task_lines += f"\n │    ... and {len(tasks) - 10} more"
 
-        print(f"""
+        print(
+            f"""
  ⚡ FlashQ Worker
  ├─ name:        {self.name}
  ├─ backend:     {backend_name}
- ├─ queues:      {', '.join(self.queues)}
+ ├─ queues:      {", ".join(self.queues)}
  ├─ concurrency: {self.concurrency}
  ├─ tasks:       {len(tasks)}
 {task_lines}
  └─ Ready! Waiting for tasks...
-""", flush=True)
+""",
+            flush=True,
+        )

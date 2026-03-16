@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 # Redis key prefixes
 _PREFIX = "flashq"
-_QUEUE_KEY = f"{_PREFIX}:queue:"          # list: queue:<name>
-_TASK_KEY = f"{_PREFIX}:task:"            # hash: task:<id>
-_RESULT_KEY = f"{_PREFIX}:result:"        # hash: result:<id>
-_SCHEDULE_KEY = f"{_PREFIX}:schedule"     # sorted set (score = eta timestamp)
-_STATE_KEY = f"{_PREFIX}:state:"          # set: state:<queue>:<state>
+_QUEUE_KEY = f"{_PREFIX}:queue:"  # list: queue:<name>
+_TASK_KEY = f"{_PREFIX}:task:"  # hash: task:<id>
+_RESULT_KEY = f"{_PREFIX}:result:"  # hash: result:<id>
+_SCHEDULE_KEY = f"{_PREFIX}:schedule"  # sorted set (score = eta timestamp)
+_STATE_KEY = f"{_PREFIX}:state:"  # set: state:<queue>:<state>
 
 # Lua script for atomic dequeue - pops highest priority pending task
 _DEQUEUE_LUA = """
@@ -117,11 +117,14 @@ class RedisBackend(BaseBackend):
 
         # Store task data as hash
         task_key = f"{_TASK_KEY}{message.id}"
-        pipe.hset(task_key, mapping={
-            "data": data,
-            "state": message.state.value,
-            "eta": str(message.eta.timestamp()) if message.eta else "",
-        })
+        pipe.hset(
+            task_key,
+            mapping={
+                "data": data,
+                "state": message.state.value,
+                "eta": str(message.eta.timestamp()) if message.eta else "",
+            },
+        )
 
         # Add to priority sorted set (score = priority, higher = first)
         queue_key = f"{_QUEUE_KEY}{message.queue}"
@@ -144,7 +147,9 @@ class RedisBackend(BaseBackend):
 
         task_id, data = result
         msg = TaskMessage.from_dict(self._serializer.loads(bytes(data)))
-        logger.debug("Dequeued %s (Redis)", task_id.decode() if isinstance(task_id, bytes) else task_id)
+        logger.debug(
+            "Dequeued %s (Redis)", task_id.decode() if isinstance(task_id, bytes) else task_id
+        )
         return msg
 
     def queue_size(self, queue: str = "default") -> int:
@@ -208,15 +213,18 @@ class RedisBackend(BaseBackend):
         result_data = self._serializer.dumps(result.result) if result.result is not None else b""
         r = self._redis()
         key = f"{_RESULT_KEY}{result.task_id}"
-        r.hset(key, mapping={
-            "state": result.state.value,
-            "result": result_data,
-            "error": result.error or "",
-            "traceback": result.traceback or "",
-            "started_at": result.started_at.isoformat() if result.started_at else "",
-            "completed_at": result.completed_at.isoformat() if result.completed_at else "",
-            "runtime_ms": str(result.runtime_ms or 0),
-        })
+        r.hset(
+            key,
+            mapping={
+                "state": result.state.value,
+                "result": result_data,
+                "error": result.error or "",
+                "traceback": result.traceback or "",
+                "started_at": result.started_at.isoformat() if result.started_at else "",
+                "completed_at": result.completed_at.isoformat() if result.completed_at else "",
+                "runtime_ms": str(result.runtime_ms or 0),
+            },
+        )
         r.expire(key, 3600)  # 1 hour TTL
 
     def get_result(self, task_id: str) -> TaskResult[Any] | None:
@@ -253,11 +261,14 @@ class RedisBackend(BaseBackend):
         data = self._serializer.dumps(message.to_dict())
         r = self._redis()
         # Store task data
-        r.hset(f"{_TASK_KEY}{message.id}", mapping={
-            "data": data,
-            "state": "pending",
-            "eta": str(message.eta.timestamp()),
-        })
+        r.hset(
+            f"{_TASK_KEY}{message.id}",
+            mapping={
+                "data": data,
+                "state": "pending",
+                "eta": str(message.eta.timestamp()),
+            },
+        )
         # Add to schedule sorted set (score = eta timestamp)
         r.zadd(_SCHEDULE_KEY, {message.id: message.eta.timestamp()})
 

@@ -27,6 +27,7 @@ PASS = 0
 FAIL = 0
 TESTS: list[tuple[str, bool, str]] = []
 
+
 def run_test(name: str, fn):
     global PASS, FAIL
     print(f"  ▸ {name}...", end=" ", flush=True)
@@ -51,12 +52,15 @@ os.chdir(TMPDIR)
 # TEST 1: Basic import
 # ═══════════════════════════════════════════
 
+
 def test_import():
     """Can we import FlashQ at all?"""
     from flashq import FlashQ, TaskState, __version__
+
     assert FlashQ is not None
     assert TaskState is not None
     assert __version__ == "0.1.0"
+
 
 run_test("Import FlashQ", test_import)
 
@@ -64,6 +68,7 @@ run_test("Import FlashQ", test_import)
 # ═══════════════════════════════════════════
 # TEST 2: Create app + define task + enqueue
 # ═══════════════════════════════════════════
+
 
 def test_basic_task():
     """README Quick Start example."""
@@ -80,12 +85,14 @@ def test_basic_task():
     assert handle.id is not None
     assert len(handle.id) == 32  # UUID hex format (no hyphens)
 
+
 run_test("Basic task creation + enqueue", test_basic_task)
 
 
 # ═══════════════════════════════════════════
 # TEST 3: Worker processes task and produces result
 # ═══════════════════════════════════════════
+
 
 def test_worker_processes():
     """Full roundtrip: enqueue → worker → result."""
@@ -117,12 +124,14 @@ def test_worker_processes():
     assert result.result == 42, f"Expected 42, got {result.result}"
     backend.teardown()
 
+
 run_test("Worker processes task → correct result", test_worker_processes)
 
 
 # ═══════════════════════════════════════════
 # TEST 4: Async task
 # ═══════════════════════════════════════════
+
 
 def test_async_task():
     """Async tasks are supported."""
@@ -138,6 +147,7 @@ def test_async_task():
     @app.task()
     async def async_add(x: int, y: int) -> int:
         import asyncio
+
         await asyncio.sleep(0.01)
         return x + y
 
@@ -155,12 +165,14 @@ def test_async_task():
     assert result.result == 30
     backend.teardown()
 
+
 run_test("Async task execution", test_async_task)
 
 
 # ═══════════════════════════════════════════
 # TEST 5: Retry mechanism
 # ═══════════════════════════════════════════
+
 
 def test_retry():
     """Task retries on failure, then succeeds."""
@@ -198,12 +210,14 @@ def test_retry():
     assert len(attempts) == 3
     backend.teardown()
 
+
 run_test("Retry mechanism (fail 2x, succeed 3rd)", test_retry)
 
 
 # ═══════════════════════════════════════════
 # TEST 6: Task timeout
 # ═══════════════════════════════════════════
+
 
 def test_timeout():
     """Task is killed after timeout."""
@@ -236,12 +250,14 @@ def test_timeout():
     assert result.state in (TaskState.FAILURE, TaskState.DEAD), f"Got {result.state}"
     backend.teardown()
 
+
 run_test("Task timeout enforcement", test_timeout)
 
 
 # ═══════════════════════════════════════════
 # TEST 7: Multiple queues
 # ═══════════════════════════════════════════
+
 
 def test_multiple_queues():
     """Different queues are isolated."""
@@ -280,12 +296,14 @@ def test_multiple_queues():
     assert r2 is None  # sms queue not processed
     backend.teardown()
 
+
 run_test("Multiple queues isolation", test_multiple_queues)
 
 
 # ═══════════════════════════════════════════
 # TEST 8: Priority ordering
 # ═══════════════════════════════════════════
+
 
 def test_priority():
     """Higher priority tasks process first."""
@@ -309,12 +327,14 @@ def test_priority():
     assert t3.task_name == "low"
     backend.teardown()
 
+
 run_test("Priority ordering (high → medium → low)", test_priority)
 
 
 # ═══════════════════════════════════════════
 # TEST 9: Middleware
 # ═══════════════════════════════════════════
+
 
 def test_middleware():
     """Middleware hooks fire correctly."""
@@ -360,12 +380,14 @@ def test_middleware():
     assert "after" in events
     backend.teardown()
 
+
 run_test("Middleware before/after hooks", test_middleware)
 
 
 # ═══════════════════════════════════════════
 # TEST 10: Dead Letter Queue
 # ═══════════════════════════════════════════
+
 
 def test_dlq():
     """Dead tasks are captured in DLQ and can be replayed."""
@@ -406,12 +428,14 @@ def test_dlq():
     assert backend.queue_size("default") == 1
     backend.teardown()
 
+
 run_test("Dead Letter Queue capture + replay", test_dlq)
 
 
 # ═══════════════════════════════════════════
 # TEST 11: Rate Limiter
 # ═══════════════════════════════════════════
+
 
 def test_rate_limiter():
     """Rate limiter throttles execution."""
@@ -433,12 +457,14 @@ def test_rate_limiter():
     assert stats["limited_task"]["max_tokens"] == 5
     backend.teardown()
 
+
 run_test("Rate limiter configuration", test_rate_limiter)
 
 
 # ═══════════════════════════════════════════
 # TEST 12: Canvas — Chain
 # ═══════════════════════════════════════════
+
 
 def test_chain():
     """Chain executes tasks sequentially."""
@@ -463,12 +489,14 @@ def test_chain():
     assert backend.queue_size("default") >= 1
     backend.teardown()
 
+
 run_test("Canvas chain creation + dispatch", test_chain)
 
 
 # ═══════════════════════════════════════════
 # TEST 13: Canvas — Group
 # ═══════════════════════════════════════════
+
 
 def test_group():
     """Group dispatches multiple tasks in parallel."""
@@ -491,12 +519,14 @@ def test_group():
     assert backend.queue_size("default") == 3
     backend.teardown()
 
+
 run_test("Canvas group parallel dispatch", test_group)
 
 
 # ═══════════════════════════════════════════
 # TEST 14: Scheduler
 # ═══════════════════════════════════════════
+
 
 def test_scheduler():
     """Periodic scheduler creates and manages schedules."""
@@ -519,12 +549,14 @@ def test_scheduler():
     assert len(scheduler._jobs) == 1
     backend.teardown()
 
+
 run_test("Periodic scheduler setup", test_scheduler)
 
 
 # ═══════════════════════════════════════════
 # TEST 15: CLI commands parse correctly
 # ═══════════════════════════════════════════
+
 
 def test_cli():
     """CLI parser works."""
@@ -544,12 +576,14 @@ def test_cli():
     args = parser.parse_args(["dashboard", "myapp:app", "--port", "8080"])
     assert args.port == 8080
 
+
 run_test("CLI parser (worker, info, dashboard)", test_cli)
 
 
 # ═══════════════════════════════════════════
 # TEST 16: Dashboard creates ASGI app
 # ═══════════════════════════════════════════
+
 
 def test_dashboard():
     """Dashboard ASGI app can be created."""
@@ -563,10 +597,12 @@ def test_dashboard():
 
     try:
         from flashq.dashboard import create_dashboard
+
         dashboard = create_dashboard(app)
         assert dashboard is not None
 
         from starlette.testclient import TestClient
+
         client = TestClient(dashboard)
 
         # Main page loads
@@ -585,12 +621,14 @@ def test_dashboard():
 
     backend.teardown()
 
+
 run_test("Dashboard ASGI app creation + HTTP", test_dashboard)
 
 
 # ═══════════════════════════════════════════
 # TEST 17: Serializers
 # ═══════════════════════════════════════════
+
 
 def test_serializers():
     """JSON and Pickle serializers work."""
@@ -611,12 +649,14 @@ def test_serializers():
     decoded = ps.loads(encoded)
     assert decoded == data
 
+
 run_test("JSON + Pickle serializers", test_serializers)
 
 
 # ═══════════════════════════════════════════
 # TEST 18: Full workflow — enqueue 50 tasks, worker processes all
 # ═══════════════════════════════════════════
+
 
 def test_full_workflow():
     """50 tasks enqueued and fully processed."""
@@ -657,12 +697,14 @@ def test_full_workflow():
     assert r5.result == 26  # 5*5+1
     backend.teardown()
 
+
 run_test("Full workflow: 50 tasks all processed correctly", test_full_workflow)
 
 
 # ═══════════════════════════════════════════
 # TEST 19: TaskHandle.get_result()
 # ═══════════════════════════════════════════
+
 
 def test_handle_get_result():
     """TaskHandle.get_result() returns the result."""
@@ -698,12 +740,14 @@ def test_handle_get_result():
     assert r.result == "Hello, World!"
     backend.teardown()
 
+
 run_test("TaskHandle.get_result() before/after", test_handle_get_result)
 
 
 # ═══════════════════════════════════════════
 # TEST 20: Error handling — exception stored in result
 # ═══════════════════════════════════════════
+
 
 def test_error_stored():
     """Failed task stores error message in result."""
@@ -734,6 +778,7 @@ def test_error_stored():
     assert result.state in (TaskState.FAILURE, TaskState.DEAD)
     assert "something went wrong" in (result.error or "")
     backend.teardown()
+
 
 run_test("Error stored in result on failure", test_error_stored)
 

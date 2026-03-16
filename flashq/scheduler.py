@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class IntervalSchedule:
     """Run a task every N seconds."""
+
     seconds: float
 
     def next_run(self, last_run: float) -> float:
@@ -56,6 +57,7 @@ class CronSchedule:
     Supports standard 5-field cron expressions: minute hour day month weekday
     Supports ``*``, specific values, ranges (``1-5``), steps (``*/5``), and lists (``1,3,5``).
     """
+
     expression: str
     _minute: list[int] | None = None
     _hour: list[int] | None = None
@@ -179,8 +181,11 @@ class Scheduler:
             next_run_at=schedule.next_run(now),
         )
         self._jobs.append(job)
-        logger.info("Scheduled %s (next: %s)", task_name,
-                     datetime.datetime.fromtimestamp(job.next_run_at, tz=datetime.timezone.utc))
+        logger.info(
+            "Scheduled %s (next: %s)",
+            task_name,
+            datetime.datetime.fromtimestamp(job.next_run_at, tz=datetime.timezone.utc),
+        )
 
     def start(self) -> None:
         """Start the scheduler in a background thread."""

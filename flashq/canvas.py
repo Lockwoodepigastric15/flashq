@@ -49,6 +49,7 @@ if TYPE_CHECKING:
 # Signature — a "frozen" task call
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class Signature:
     """A serializable reference to a task call (task name + args + kwargs).
@@ -112,6 +113,7 @@ class Signature:
 # Chain — sequential execution
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Chain:
     """Execute tasks sequentially, passing each result to the next.
@@ -153,6 +155,7 @@ class ChainHandle:
 # ---------------------------------------------------------------------------
 # Group — parallel execution
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Group:
@@ -208,7 +211,11 @@ class GroupHandle:
                 if tid in results:
                     continue
                 result = self.app.backend.get_result(tid)
-                if result is not None and result.state in (TaskState.SUCCESS, TaskState.FAILURE, TaskState.DEAD):
+                if result is not None and result.state in (
+                    TaskState.SUCCESS,
+                    TaskState.FAILURE,
+                    TaskState.DEAD,
+                ):
                     results[tid] = result.result if result.state == TaskState.SUCCESS else None
 
             if len(results) == len(self.task_ids):
@@ -224,7 +231,11 @@ class GroupHandle:
         count = 0
         for tid in self.task_ids:
             result = self.app.backend.get_result(tid)
-            if result is not None and result.state in (TaskState.SUCCESS, TaskState.FAILURE, TaskState.DEAD):
+            if result is not None and result.state in (
+                TaskState.SUCCESS,
+                TaskState.FAILURE,
+                TaskState.DEAD,
+            ):
                 count += 1
         return count
 
@@ -232,6 +243,7 @@ class GroupHandle:
 # ---------------------------------------------------------------------------
 # Chord — group + callback
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Chord:
@@ -286,6 +298,7 @@ class ChordHandle:
 # ---------------------------------------------------------------------------
 # Convenience constructors
 # ---------------------------------------------------------------------------
+
 
 def chain(*signatures: Signature) -> Chain:
     """Create a chain from signatures."""

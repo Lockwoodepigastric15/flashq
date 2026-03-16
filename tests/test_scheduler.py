@@ -90,6 +90,7 @@ class TestCronSchedule:
 
     def test_matches(self):
         import datetime
+
         s = CronSchedule("30 9 * * *")
         dt_match = datetime.datetime(2024, 1, 15, 9, 30, tzinfo=datetime.timezone.utc)
         dt_no_match = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)

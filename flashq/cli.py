@@ -134,7 +134,10 @@ def cmd_dashboard(args: argparse.Namespace) -> None:
     try:
         import uvicorn
     except ImportError:
-        print("Error: Dashboard requires uvicorn. Install with: pip install 'flashq[dashboard]'", file=sys.stderr)
+        print(
+            "Error: Dashboard requires uvicorn. Install with: pip install 'flashq[dashboard]'",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     from flashq.dashboard import create_dashboard
@@ -155,9 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="flashq",
         description="⚡ FlashQ — The task queue that works out of the box.",
     )
-    parser.add_argument(
-        "--version", action="version", version=f"flashq {__version__}"
-    )
+    parser.add_argument("--version", action="version", version=f"flashq {__version__}")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -165,12 +166,14 @@ def build_parser() -> argparse.ArgumentParser:
     worker_parser = subparsers.add_parser("worker", help="Start a worker process")
     worker_parser.add_argument("app", help="App path (e.g., 'myapp:app')")
     worker_parser.add_argument(
-        "-q", "--queues",
+        "-q",
+        "--queues",
         default=None,
         help="Comma-separated list of queues (default: 'default')",
     )
     worker_parser.add_argument(
-        "-c", "--concurrency",
+        "-c",
+        "--concurrency",
         type=int,
         default=4,
         help="Number of concurrent task threads (default: 4)",
@@ -182,12 +185,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds between queue polls (default: 1.0)",
     )
     worker_parser.add_argument(
-        "-n", "--name",
+        "-n",
+        "--name",
         default=None,
         help="Worker name (default: worker-{pid})",
     )
     worker_parser.add_argument(
-        "-l", "--log-level",
+        "-l",
+        "--log-level",
         default="info",
         choices=["debug", "info", "warning", "error"],
         help="Log level (default: info)",
@@ -197,19 +202,16 @@ def build_parser() -> argparse.ArgumentParser:
     # info command
     info_parser = subparsers.add_parser("info", help="Show queue information")
     info_parser.add_argument("app", help="App path (e.g., 'myapp:app')")
-    info_parser.add_argument(
-        "--queue", default=None, help="Queue name (default: 'default')"
-    )
+    info_parser.add_argument("--queue", default=None, help="Queue name (default: 'default')")
     info_parser.set_defaults(func=cmd_info)
 
     # purge command
     purge_parser = subparsers.add_parser("purge", help="Delete all pending tasks")
     purge_parser.add_argument("app", help="App path (e.g., 'myapp:app')")
+    purge_parser.add_argument("--queue", default=None, help="Queue name (default: 'default')")
     purge_parser.add_argument(
-        "--queue", default=None, help="Queue name (default: 'default')"
-    )
-    purge_parser.add_argument(
-        "-f", "--force",
+        "-f",
+        "--force",
         action="store_true",
         help="Skip confirmation prompt",
     )
@@ -219,7 +221,8 @@ def build_parser() -> argparse.ArgumentParser:
     dash_parser = subparsers.add_parser("dashboard", help="Start the web dashboard")
     dash_parser.add_argument("app", help="App path (e.g., 'myapp:app')")
     dash_parser.add_argument(
-        "-p", "--port",
+        "-p",
+        "--port",
         type=int,
         default=5555,
         help="Port to listen on (default: 5555)",

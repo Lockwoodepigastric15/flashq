@@ -131,7 +131,9 @@ class DeadLetterQueue:
             state=TaskState.PENDING,
         )
         self._app.backend.enqueue(new_msg)
-        logger.info("Replayed task %s [%s] → new ID %s", dead.task_name, task_id[:8], new_msg.id[:8])
+        logger.info(
+            "Replayed task %s [%s] → new ID %s", dead.task_name, task_id[:8], new_msg.id[:8]
+        )
         return new_msg.id
 
     def replay_all(self) -> int:

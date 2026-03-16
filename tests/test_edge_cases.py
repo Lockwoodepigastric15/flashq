@@ -223,6 +223,7 @@ class TestEdgeCases:
             return 1
 
         with pytest.raises(DuplicateTaskError):
+
             @app.task(name="dup")
             def dup_v2() -> int:
                 return 2

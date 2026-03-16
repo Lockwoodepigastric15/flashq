@@ -167,7 +167,8 @@ class RateLimiter(Middleware):
         # Rate limited — log and skip (worker will re-enqueue later)
         logger.warning(
             "Rate limited: %s [%s] — will retry",
-            message.task_name, message.id[:8],
+            message.task_name,
+            message.id[:8],
         )
         return None  # Skip execution — task stays in queue or gets cancelled
 

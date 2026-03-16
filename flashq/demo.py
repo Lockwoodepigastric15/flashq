@@ -91,7 +91,7 @@ def main() -> None:
     for i in range(5):
         h = add.delay(i, i * 10)
         handles.append(("add", h, i, i * 10))
-        print(f"  │  add.delay({i}, {i*10})  →  task_id: {h.id[:8]}…")
+        print(f"  │  add.delay({i}, {i * 10})  →  task_id: {h.id[:8]}…")
 
     for i in range(5):
         h = multiply.delay(i + 1, 7)
@@ -146,9 +146,9 @@ def main() -> None:
                     elif task_name == "multiply":
                         print(f"  │  ✅ multiply({arg1}, {arg2}) = {result.result}")
                     elif task_name == "greet":
-                        print(f"  │  ✅ greet(\"{arg1}\") = \"{result.result}\"")
+                        print(f'  │  ✅ greet("{arg1}") = "{result.result}"')
                     elif task_name == "risky_task":
-                        print(f"  │  ✅ risky_task({arg1}) = \"{result.result}\"")
+                        print(f'  │  ✅ risky_task({arg1}) = "{result.result}"')
                 else:
                     fail_count += 1
                     print(f"  │  ❌ {task_name}({arg1}) failed: {result.error}")

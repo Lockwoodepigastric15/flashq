@@ -32,6 +32,7 @@ def app(backend):
 # Test Middleware base class defaults
 # ---------------------------------------------------------------------------
 
+
 class TestMiddlewareBase:
     def test_before_execute_returns_message(self):
         mw = Middleware()
@@ -69,6 +70,7 @@ class TestMiddlewareBase:
 # ---------------------------------------------------------------------------
 # Recording middleware for assertions
 # ---------------------------------------------------------------------------
+
 
 class RecordingMiddleware(Middleware):
     def __init__(self):
@@ -138,6 +140,7 @@ class FaultyMiddleware(Middleware):
 # ---------------------------------------------------------------------------
 # MiddlewareStack unit tests
 # ---------------------------------------------------------------------------
+
 
 class TestMiddlewareStack:
     def test_add_and_list(self):
@@ -245,6 +248,7 @@ class TestMiddlewareStack:
 # Built-in middleware tests
 # ---------------------------------------------------------------------------
 
+
 class TestLoggingMiddleware:
     def test_logging_before_execute(self, caplog):
         mw = LoggingMiddleware()
@@ -293,6 +297,7 @@ class TestTimeoutMiddleware:
 # ---------------------------------------------------------------------------
 # Full integration with FlashQ app + Worker
 # ---------------------------------------------------------------------------
+
 
 class TestMiddlewareIntegration:
     def test_add_middleware_to_app(self, app):

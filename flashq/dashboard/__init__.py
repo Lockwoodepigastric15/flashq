@@ -55,10 +55,7 @@ def create_dashboard(app: FlashQ, prefix: str = "") -> Any:
         from starlette.responses import HTMLResponse, JSONResponse
         from starlette.routing import Route
     except ImportError as exc:
-        msg = (
-            "Dashboard requires starlette. "
-            "Install with: pip install 'flashq[dashboard]'"
-        )
+        msg = "Dashboard requires starlette. Install with: pip install 'flashq[dashboard]'"
         raise ImportError(msg) from exc
 
     from flashq.enums import TaskState

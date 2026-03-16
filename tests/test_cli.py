@@ -35,11 +35,13 @@ class TestImportApp:
     def test_valid_import(self):
         result = _import_app("os:path")
         import os
+
         assert result is os.path
 
     def test_dot_notation_import(self):
         result = _import_app("os.path:join")
         import os.path
+
         assert result is os.path.join
 
 
@@ -75,14 +77,22 @@ class TestBuildParser:
 
     def test_worker_all_options(self):
         parser = build_parser()
-        args = parser.parse_args([
-            "worker", "myapp:app",
-            "-c", "16",
-            "-q", "high,low",
-            "--poll-interval", "0.25",
-            "-n", "my-worker",
-            "-l", "debug",
-        ])
+        args = parser.parse_args(
+            [
+                "worker",
+                "myapp:app",
+                "-c",
+                "16",
+                "-q",
+                "high,low",
+                "--poll-interval",
+                "0.25",
+                "-n",
+                "my-worker",
+                "-l",
+                "debug",
+            ]
+        )
         assert args.concurrency == 16
         assert args.queues == "high,low"
         assert args.poll_interval == 0.25
@@ -121,11 +131,20 @@ class TestCmdWorker:
     def test_worker_parser_accepts_args(self):
         """Verify worker command parses all options correctly."""
         parser = build_parser()
-        args = parser.parse_args([
-            "worker", "myapp:app",
-            "-c", "8", "-q", "default,emails",
-            "--poll-interval", "0.5", "-n", "test-worker",
-        ])
+        args = parser.parse_args(
+            [
+                "worker",
+                "myapp:app",
+                "-c",
+                "8",
+                "-q",
+                "default,emails",
+                "--poll-interval",
+                "0.5",
+                "-n",
+                "test-worker",
+            ]
+        )
         assert args.app == "myapp:app"
         assert args.concurrency == 8
         assert args.queues == "default,emails"
@@ -189,7 +208,10 @@ class TestCmdPurge:
         mock_import.return_value = mock_app
 
         args = argparse.Namespace(
-            app="myapp:app", queue=None, force=True, log_level="info",
+            app="myapp:app",
+            queue=None,
+            force=True,
+            log_level="info",
         )
         cmd_purge(args)
 
@@ -206,7 +228,10 @@ class TestCmdPurge:
         mock_import.return_value = mock_app
 
         args = argparse.Namespace(
-            app="myapp:app", queue=None, force=False, log_level="info",
+            app="myapp:app",
+            queue=None,
+            force=False,
+            log_level="info",
         )
         cmd_purge(args)
 
@@ -222,7 +247,10 @@ class TestCmdPurge:
         mock_import.return_value = mock_app
 
         args = argparse.Namespace(
-            app="myapp:app", queue=None, force=False, log_level="info",
+            app="myapp:app",
+            queue=None,
+            force=False,
+            log_level="info",
         )
         cmd_purge(args)
 
@@ -259,7 +287,9 @@ class TestMain:
     def test_with_command_calls_func(self, mock_logging, mock_build):
         mock_func = MagicMock()
         mock_args = argparse.Namespace(
-            command="version", func=mock_func, log_level="info",
+            command="version",
+            func=mock_func,
+            log_level="info",
         )
         mock_parser = MagicMock()
         mock_parser.parse_args.return_value = mock_args

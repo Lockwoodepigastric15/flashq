@@ -29,7 +29,9 @@ def app(backend):
 
 def _run_worker(app, poll_interval=0.1, schedule_interval=0.3, duration=1.5, **kwargs):
     """Helper: run a worker in a background thread for a given duration."""
-    worker = Worker(app, poll_interval=poll_interval, schedule_interval=schedule_interval, **kwargs)
+    worker = Worker(
+        app, poll_interval=poll_interval, schedule_interval=schedule_interval, **kwargs
+    )
     t = threading.Thread(target=worker.start, daemon=True)
     t.start()
     time.sleep(duration)
@@ -102,6 +104,7 @@ class TestWorkerExecution:
             order.append(label)
 
         from flashq import TaskPriority
+
         track_task.apply(args=("low",), priority=TaskPriority.LOW)
         track_task.apply(args=("high",), priority=TaskPriority.HIGH)
         track_task.apply(args=("critical",), priority=TaskPriority.CRITICAL)
@@ -210,7 +213,7 @@ class TestWorkerExecution:
         t = threading.Thread(target=worker.start, daemon=True)
         t.start()
         time.sleep(0.2)  # Let it start
-        worker.stop()    # Signal stop
+        worker.stop()  # Signal stop
         t.join(timeout=10)
 
         assert not t.is_alive()
@@ -248,6 +251,7 @@ class TestWorkerSchedule:
         result_found = False
         # Check results table
         import sqlite3
+
         conn = sqlite3.connect(str(backend.path))
         conn.row_factory = sqlite3.Row
         rows = conn.execute("SELECT * FROM results").fetchall()

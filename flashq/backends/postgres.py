@@ -191,9 +191,7 @@ class PostgresBackend(BaseBackend):
                 ),
             )
             # Notify workers listening on this queue
-            conn.execute(
-                "SELECT pg_notify(%s, %s)", (f"flashq_{message.queue}", message.id)
-            )
+            conn.execute("SELECT pg_notify(%s, %s)", (f"flashq_{message.queue}", message.id))
         logger.debug("Enqueued %s on %r (PG)", message.id, message.queue)
 
     def dequeue(self, queue: str = "default") -> TaskMessage | None:
@@ -256,10 +254,7 @@ class PostgresBackend(BaseBackend):
                    ORDER BY created_at DESC LIMIT %s""",
                 (queue, state.value, limit),
             ).fetchall()
-            return [
-                TaskMessage.from_dict(self._serializer.loads(bytes(r[0])))
-                for r in rows
-            ]
+            return [TaskMessage.from_dict(self._serializer.loads(bytes(r[0]))) for r in rows]
 
     # -- results --
 
@@ -351,10 +346,7 @@ class PostgresBackend(BaseBackend):
                    RETURNING data""",
                 (now,),
             ).fetchall()
-            return [
-                TaskMessage.from_dict(self._serializer.loads(bytes(r[0])))
-                for r in rows
-            ]
+            return [TaskMessage.from_dict(self._serializer.loads(bytes(r[0]))) for r in rows]
 
     def schedule_size(self) -> int:
         pool = self._get_pool()

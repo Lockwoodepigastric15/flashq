@@ -30,10 +30,12 @@ def app(backend):
 # FlashQ App
 # ---------------------------------------------------------------------------
 
+
 class TestFlashQApp:
     def test_create_app_default_backend(self, tmp_path):
         """Default app uses SQLite backend."""
         import os
+
         os.chdir(tmp_path)
         app = FlashQ(name="default-test")
         assert isinstance(app.backend, SQLiteBackend)
@@ -64,6 +66,7 @@ class TestFlashQApp:
             return "first"
 
         with pytest.raises(DuplicateTaskError):
+
             @app.task(name="dup_task")
             def second() -> str:
                 return "second"
@@ -108,12 +111,14 @@ class TestFlashQApp:
 
     def test_middleware_property(self, app):
         from flashq.middleware import MiddlewareStack
+
         assert isinstance(app.middleware, MiddlewareStack)
 
 
 # ---------------------------------------------------------------------------
 # Task
 # ---------------------------------------------------------------------------
+
 
 class TestTask:
     def test_delay(self, app):
@@ -144,6 +149,7 @@ class TestTask:
 
     def test_apply_eta(self, app):
         import datetime
+
         future = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
 
         @app.task(name="eta_test")
@@ -172,6 +178,7 @@ class TestTask:
 # TaskHandle
 # ---------------------------------------------------------------------------
 
+
 class TestTaskHandle:
     def test_get_state(self, app):
         @app.task(name="state_test")
@@ -195,6 +202,7 @@ class TestTaskHandle:
 # ---------------------------------------------------------------------------
 # TaskMessage
 # ---------------------------------------------------------------------------
+
 
 class TestTaskMessage:
     def test_roundtrip(self):
@@ -228,6 +236,7 @@ class TestTaskMessage:
 
     def test_eta_serialization(self):
         import datetime
+
         eta = datetime.datetime(2025, 6, 15, 12, 0, tzinfo=datetime.timezone.utc)
         msg = TaskMessage(task_name="test", eta=eta)
         d = msg.to_dict()
@@ -238,6 +247,7 @@ class TestTaskMessage:
 # ---------------------------------------------------------------------------
 # TaskResult
 # ---------------------------------------------------------------------------
+
 
 class TestTaskResult:
     def test_success(self):
@@ -256,8 +266,11 @@ class TestTaskResult:
 
     def test_roundtrip(self):
         import datetime
+
         r = TaskResult(
-            task_id="abc", state=TaskState.SUCCESS, result={"key": "val"},
+            task_id="abc",
+            state=TaskState.SUCCESS,
+            result={"key": "val"},
             started_at=datetime.datetime.now(datetime.timezone.utc),
             completed_at=datetime.datetime.now(datetime.timezone.utc),
             runtime_ms=42.5,
@@ -272,6 +285,7 @@ class TestTaskResult:
 # ---------------------------------------------------------------------------
 # SQLite Backend
 # ---------------------------------------------------------------------------
+
 
 class TestSQLiteBackend:
     def test_enqueue_dequeue(self, backend):
@@ -354,6 +368,7 @@ class TestSQLiteBackend:
 
     def test_schedule_enqueue_dequeue(self, backend):
         import datetime
+
         eta = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=10)
         msg = TaskMessage(task_name="scheduled", eta=eta)
         backend.add_to_schedule(msg)
@@ -368,6 +383,7 @@ class TestSQLiteBackend:
 
     def test_schedule_future_not_due(self, backend):
         import datetime
+
         eta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
         msg = TaskMessage(task_name="future", eta=eta)
         backend.add_to_schedule(msg)
@@ -407,8 +423,10 @@ class TestSQLiteBackend:
 
         # Simulate retry — create new message with same ID
         retry_msg = TaskMessage(
-            id=msg.id, task_name="retry_test",
-            state=TaskState.PENDING, retries=1,
+            id=msg.id,
+            task_name="retry_test",
+            state=TaskState.PENDING,
+            retries=1,
         )
         backend.enqueue(retry_msg)
 
@@ -433,6 +451,7 @@ class TestSQLiteBackend:
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class TestEnums:
     def test_task_state_values(self):
         assert TaskState.PENDING.value == "pending"
@@ -453,40 +472,48 @@ class TestEnums:
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class TestExceptions:
     def test_task_not_found(self):
         from flashq.exceptions import TaskNotFoundError
+
         exc = TaskNotFoundError("my_task")
         assert "my_task" in str(exc)
 
     def test_duplicate_task(self):
         from flashq.exceptions import DuplicateTaskError
+
         exc = DuplicateTaskError("dup")
         assert "dup" in str(exc)
 
     def test_task_timeout_error(self):
         from flashq.exceptions import TaskTimeoutError
+
         exc = TaskTimeoutError("task123", 30.0)
         assert "task123" in str(exc)
         assert "30" in str(exc)
 
     def test_task_retry_error(self):
         from flashq.exceptions import TaskRetryError
+
         exc = TaskRetryError()
         assert isinstance(exc, Exception)
 
     def test_backend_error(self):
         from flashq.exceptions import BackendError
+
         exc = BackendError("connection lost")
         assert "connection lost" in str(exc)
 
     def test_serialization_error(self):
         from flashq.exceptions import SerializationError
+
         exc = SerializationError("bad data")
         assert "bad data" in str(exc)
 
     def test_worker_shutdown_error(self):
         from flashq.exceptions import WorkerShutdownError
+
         exc = WorkerShutdownError()
         assert isinstance(exc, Exception)
 
@@ -501,6 +528,7 @@ class TestExceptions:
             TaskTimeoutError,
             WorkerShutdownError,
         )
+
         assert issubclass(TaskNotFoundError, FlashQError)
         assert issubclass(DuplicateTaskError, FlashQError)
         assert issubclass(TaskTimeoutError, FlashQError)

@@ -166,7 +166,9 @@ class SQLiteBackend(BaseBackend):
             conn = sqlite3.connect(self.path, timeout=self._timeout)
             conn.isolation_level = None  # manual transaction control
             conn.row_factory = sqlite3.Row
-            conn.execute("PRAGMA journal_mode=WAL" if self._wal_mode else "PRAGMA journal_mode=DELETE")
+            conn.execute(
+                "PRAGMA journal_mode=WAL" if self._wal_mode else "PRAGMA journal_mode=DELETE"
+            )
             conn.execute(f"PRAGMA cache_size=-{1000 * self._cache_mb}")
             conn.execute("PRAGMA synchronous=NORMAL")  # safe with WAL
             conn.execute("PRAGMA foreign_keys=ON")
@@ -252,7 +254,9 @@ class SQLiteBackend(BaseBackend):
                     None,
                 ),
             )
-        logger.debug("Enqueued task %s (%s) on queue %r", message.id, message.task_name, message.queue)
+        logger.debug(
+            "Enqueued task %s (%s) on queue %r", message.id, message.task_name, message.queue
+        )
 
     def dequeue(self, queue: str = "default") -> TaskMessage | None:
         """Atomically claim the highest-priority pending task.
@@ -351,10 +355,7 @@ class SQLiteBackend(BaseBackend):
             """,
             (queue, state.value, limit),
         ).fetchall()
-        return [
-            TaskMessage.from_dict(self._serializer.loads(bytes(row["data"])))
-            for row in rows
-        ]
+        return [TaskMessage.from_dict(self._serializer.loads(bytes(row["data"]))) for row in rows]
 
     # ──────────────────────────────────────────────
     # Results
@@ -406,12 +407,12 @@ class SQLiteBackend(BaseBackend):
             error=row["error"],
             traceback=row["traceback"],
             started_at=(
-                datetime.datetime.fromisoformat(row["started_at"])
-                if row["started_at"] else None
+                datetime.datetime.fromisoformat(row["started_at"]) if row["started_at"] else None
             ),
             completed_at=(
                 datetime.datetime.fromisoformat(row["completed_at"])
-                if row["completed_at"] else None
+                if row["completed_at"]
+                else None
             ),
             runtime_ms=row["runtime_ms"],
         )
@@ -468,10 +469,7 @@ class SQLiteBackend(BaseBackend):
             placeholders = ",".join("?" * len(ids))
             conn.execute(f"DELETE FROM schedules WHERE id IN ({placeholders})", ids)
 
-        return [
-            TaskMessage.from_dict(self._serializer.loads(bytes(row["data"])))
-            for row in rows
-        ]
+        return [TaskMessage.from_dict(self._serializer.loads(bytes(row["data"]))) for row in rows]
 
     def schedule_size(self) -> int:
         """Count scheduled tasks."""
@@ -480,8 +478,6 @@ class SQLiteBackend(BaseBackend):
 
     def get_queue_names(self) -> list[str]:
         """Get distinct queue names from the tasks table."""
-        rows = self.conn.execute(
-            "SELECT DISTINCT queue FROM tasks ORDER BY queue"
-        ).fetchall()
+        rows = self.conn.execute("SELECT DISTINCT queue FROM tasks ORDER BY queue").fetchall()
         names = [r["queue"] for r in rows]
         return names if names else ["default"]

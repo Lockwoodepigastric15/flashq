@@ -146,6 +146,7 @@ class MiddlewareStack:
 # Built-in middlewares
 # ---------------------------------------------------------------------------
 
+
 class LoggingMiddleware(Middleware):
     """Logs task lifecycle events at appropriate levels."""
 
@@ -155,33 +156,45 @@ class LoggingMiddleware(Middleware):
     def before_execute(self, message: TaskMessage) -> TaskMessage | None:
         self._logger.info(
             "Executing %s [%s] retry=%d",
-            message.task_name, message.id[:8], message.retries,
+            message.task_name,
+            message.id[:8],
+            message.retries,
         )
         return message
 
     def after_execute(self, message: TaskMessage, result: Any) -> None:
         self._logger.info(
             "Completed %s [%s] result=%s",
-            message.task_name, message.id[:8], repr(result)[:100],
+            message.task_name,
+            message.id[:8],
+            repr(result)[:100],
         )
 
     def on_error(self, message: TaskMessage, exc: Exception) -> bool:
         self._logger.error(
             "Failed %s [%s]: %s",
-            message.task_name, message.id[:8], exc,
+            message.task_name,
+            message.id[:8],
+            exc,
         )
         return False
 
     def on_retry(self, message: TaskMessage, exc: Exception, countdown: float) -> None:
         self._logger.warning(
             "Retrying %s [%s] in %.1fs: %s",
-            message.task_name, message.id[:8], countdown, exc,
+            message.task_name,
+            message.id[:8],
+            countdown,
+            exc,
         )
 
     def on_dead(self, message: TaskMessage, exc: Exception) -> None:
         self._logger.critical(
             "Dead %s [%s] after %d retries: %s",
-            message.task_name, message.id[:8], message.max_retries, exc,
+            message.task_name,
+            message.id[:8],
+            message.max_retries,
+            exc,
         )
 
 
@@ -190,6 +203,7 @@ class TimeoutMiddleware(Middleware):
 
     def __init__(self) -> None:
         import time as _time
+
         self._start_times: dict[str, float] = {}
         self._time = _time
 
@@ -203,10 +217,11 @@ class TimeoutMiddleware(Middleware):
             elapsed = self._time.monotonic() - start
             logger.debug(
                 "Task %s [%s] completed in %.3fs",
-                message.task_name, message.id[:8], elapsed,
+                message.task_name,
+                message.id[:8],
+                elapsed,
             )
 
     def on_error(self, message: TaskMessage, exc: Exception) -> bool:
         self._start_times.pop(message.id, None)
         return False
-

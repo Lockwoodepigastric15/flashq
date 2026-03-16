@@ -37,12 +37,14 @@ class TaskState(str, enum.Enum):
         return self in (TaskState.RUNNING, TaskState.RETRYING)
 
 
-_TERMINAL_STATES = frozenset({
-    TaskState.SUCCESS,
-    TaskState.CANCELLED,
-    TaskState.REVOKED,
-    TaskState.DEAD,
-})
+_TERMINAL_STATES = frozenset(
+    {
+        TaskState.SUCCESS,
+        TaskState.CANCELLED,
+        TaskState.REVOKED,
+        TaskState.DEAD,
+    }
+)
 
 
 class TaskPriority(int, enum.Enum):

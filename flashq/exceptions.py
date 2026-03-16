@@ -25,9 +25,7 @@ class TaskTimeoutError(FlashQError):
     def __init__(self, task_id: str, timeout: float) -> None:
         self.task_id = task_id
         self.timeout = timeout
-        super().__init__(
-            f"Task {task_id!r} did not complete within {timeout}s"
-        )
+        super().__init__(f"Task {task_id!r} did not complete within {timeout}s")
 
 
 class BackendError(FlashQError):
