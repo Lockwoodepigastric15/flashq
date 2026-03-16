@@ -5,7 +5,7 @@
 [![CI](https://github.com/bysiber/flashq/actions/workflows/ci.yml/badge.svg)](https://github.com/bysiber/flashq/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/pypi/pyversions/flashq)](https://pypi.org/project/flashq/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-240%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-260%20passing-brightgreen)]()
 
 ---
 
@@ -323,6 +323,33 @@ flashq dashboard myapp:app               # Start web dashboard
 flashq dashboard myapp:app -p 8080       # Custom port
 flashq info myapp:app                    # Queue stats
 flashq purge myapp:app -f                # Purge queue
+```
+
+## Benchmarks
+
+Measured on Apple Silicon (M-series), Python 3.12, SQLite backend:
+
+| Benchmark | Tasks | Time | Throughput | Avg Latency |
+|-----------|------:|-----:|-----------:|------------:|
+| Enqueue (write only) | 10,000 | 0.52s | **19,298/s** | 0.05ms |
+| Roundtrip (c=4) | 1,000 | 25.7s | 39/s | 0.02ms |
+| I/O-bound (c=8) | 500 | 6.7s | 75/s | 11.6ms |
+| CPU-bound (c=4) | 500 | 12.8s | 39/s | 0.03ms |
+
+**Concurrency scaling** (500 tasks):
+
+| Workers | Throughput |
+|:-------:|-----------:|
+| 1 | 10 tasks/s |
+| 2 | 19 tasks/s |
+| 4 | 38 tasks/s |
+| 8 | 100 tasks/s |
+
+> 💡 Throughput scales linearly with concurrency. For I/O-bound workloads, use higher concurrency.
+
+Run benchmarks yourself:
+```bash
+python benchmarks/bench.py
 ```
 
 ## Architecture
