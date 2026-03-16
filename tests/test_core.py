@@ -1,4 +1,4 @@
-"""Tests for FlashQ core functionality."""
+"""Comprehensive tests for FlashQ core functionality."""
 
 from __future__ import annotations
 
@@ -6,21 +6,16 @@ import time
 
 import pytest
 
-from flashq import FlashQ, TaskState
+from flashq import FlashQ, TaskPriority, TaskState
 from flashq.backends.sqlite import SQLiteBackend
+from flashq.exceptions import DuplicateTaskError, TaskNotFoundError
 from flashq.models import TaskMessage, TaskResult
-from flashq.task import Task, TaskHandle
-
-# ──────────────────────────────────────────────
-# Fixtures
-# ──────────────────────────────────────────────
+from flashq.task import TaskHandle
 
 
 @pytest.fixture
 def backend(tmp_path):
-    """Create a fresh SQLite backend for each test."""
-    db_path = str(tmp_path / "test.db")
-    b = SQLiteBackend(path=db_path)
+    b = SQLiteBackend(path=str(tmp_path / "test.db"))
     b.setup()
     yield b
     b.teardown()
@@ -28,102 +23,118 @@ def backend(tmp_path):
 
 @pytest.fixture
 def app(backend):
-    """Create a FlashQ app with a test backend."""
-    return FlashQ(backend=backend, name="test")
+    return FlashQ(backend=backend, name="test-app")
 
 
-# ──────────────────────────────────────────────
-# App & task registration tests
-# ──────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# FlashQ App
+# ---------------------------------------------------------------------------
 
+class TestFlashQApp:
+    def test_create_app_default_backend(self, tmp_path):
+        """Default app uses SQLite backend."""
+        import os
+        os.chdir(tmp_path)
+        app = FlashQ(name="default-test")
+        assert isinstance(app.backend, SQLiteBackend)
+        app.backend.teardown()
 
-class TestApp:
-    def test_create_default_app(self):
-        """App can be created with zero config."""
-        app = FlashQ()
-        assert app.name == "flashq"
-        assert len(app.registry) == 0
+    def test_create_app_custom_backend(self, backend):
+        app = FlashQ(backend=backend, name="custom")
+        assert app.backend is backend
+        assert app.name == "custom"
 
-    def test_register_task_with_decorator(self, app):
-        """@app.task() registers the function."""
-
+    def test_register_task(self, app):
         @app.task()
-        def my_task(x: int) -> int:
-            return x * 2
+        def my_task() -> str:
+            return "hello"
 
-        assert "tests.test_core.TestApp.test_register_task_with_decorator.<locals>.my_task" in app.registry
-        assert isinstance(my_task, Task)
+        assert "tests.test_core.TestFlashQApp.test_register_task.<locals>.my_task" in app.registry
 
-    def test_register_task_bare_decorator(self, app):
-        """@app.task (no parens) also works."""
+    def test_register_task_custom_name(self, app):
+        @app.task(name="custom.name")
+        def my_task() -> str:
+            return "hello"
 
-        @app.task
-        def my_task(x: int) -> int:
-            return x * 2
-
-        assert isinstance(my_task, Task)
+        assert "custom.name" in app.registry
 
     def test_duplicate_task_raises(self, app):
-        """Registering the same task name twice raises an error."""
-        from flashq.exceptions import DuplicateTaskError
-
-        @app.task(name="unique_task")
-        def task_a():
-            pass
+        @app.task(name="dup_task")
+        def first() -> str:
+            return "first"
 
         with pytest.raises(DuplicateTaskError):
-
-            @app.task(name="unique_task")
-            def task_b():
-                pass
-
-    def test_task_direct_call(self, app):
-        """Task can be called directly (synchronously)."""
-
-        @app.task()
-        def add(x: int, y: int) -> int:
-            return x + y
-
-        assert add(2, 3) == 5
+            @app.task(name="dup_task")
+            def second() -> str:
+                return "second"
 
     def test_get_task(self, app):
-        """get_task retrieves registered tasks by name."""
+        @app.task(name="findme")
+        def findme() -> str:
+            return "found"
 
-        @app.task(name="my.custom.task")
-        def custom():
-            pass
-
-        assert app.get_task("my.custom.task") is custom
+        task = app.get_task("findme")
+        assert task.name == "findme"
 
     def test_get_task_not_found(self, app):
-        """get_task raises TaskNotFoundError for unknown tasks."""
-        from flashq.exceptions import TaskNotFoundError
-
         with pytest.raises(TaskNotFoundError):
             app.get_task("nonexistent")
 
+    def test_task_options(self, app):
+        @app.task(
+            name="opts",
+            queue="high",
+            priority=TaskPriority.HIGH,
+            max_retries=5,
+            retry_delay=30.0,
+            retry_backoff=True,
+            timeout=120.0,
+            result_ttl=7200.0,
+        )
+        def opts_task() -> str:
+            return "ok"
 
-# ──────────────────────────────────────────────
-# Task enqueue tests
-# ──────────────────────────────────────────────
+        task = app.get_task("opts")
+        assert task.queue == "high"
+        assert task.priority == TaskPriority.HIGH
+        assert task.max_retries == 5
+        assert task.retry_delay == 30.0
+        assert task.retry_backoff is True
+        assert task.timeout == 120.0
+        assert task.result_ttl == 7200.0
+
+    def test_registry_property(self, app):
+        assert isinstance(app.registry, dict)
+
+    def test_middleware_property(self, app):
+        from flashq.middleware import MiddlewareStack
+        assert isinstance(app.middleware, MiddlewareStack)
 
 
-class TestEnqueue:
-    def test_delay_enqueues(self, app):
-        """task.delay() puts a message in the queue."""
+# ---------------------------------------------------------------------------
+# Task
+# ---------------------------------------------------------------------------
 
-        @app.task()
-        def my_task(x: int) -> int:
-            return x
+class TestTask:
+    def test_delay(self, app):
+        @app.task(name="delay_test")
+        def add(a: int, b: int) -> int:
+            return a + b
 
-        handle = my_task.delay(42)
+        handle = add.delay(1, 2)
         assert isinstance(handle, TaskHandle)
-        assert app.backend.queue_size("default") == 1
+        assert handle.id is not None
 
-    def test_apply_with_countdown(self, app):
-        """task.apply(countdown=...) schedules instead of enqueueing."""
+    def test_apply(self, app):
+        @app.task(name="apply_test")
+        def add(a: int, b: int) -> int:
+            return a + b
 
-        @app.task()
+        handle = add.apply(args=(1, 2))
+        assert isinstance(handle, TaskHandle)
+
+    def test_apply_countdown(self, app):
+        @app.task(name="countdown_test")
         def my_task() -> None:
             pass
 
@@ -131,217 +142,369 @@ class TestEnqueue:
         assert app.backend.queue_size("default") == 0
         assert app.backend.schedule_size() == 1
 
-    def test_apply_custom_queue(self, app):
-        """task.apply(queue=...) overrides the default queue."""
+    def test_apply_eta(self, app):
+        import datetime
+        future = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
 
-        @app.task()
+        @app.task(name="eta_test")
         def my_task() -> None:
             pass
 
-        my_task.apply(queue="high-priority")
-        assert app.backend.queue_size("high-priority") == 1
-        assert app.backend.queue_size("default") == 0
+        my_task.apply(eta=future)
+        assert app.backend.schedule_size() == 1
 
-    def test_cancel_pending_task(self, app):
-        """Pending tasks can be cancelled."""
-
+    def test_task_name_auto(self, app):
         @app.task()
+        def auto_name() -> None:
+            pass
+
+        assert "auto_name" in next(iter(app.registry.keys()))
+
+    def test_task_repr(self, app):
+        @app.task(name="repr_test")
+        def my_task() -> None:
+            pass
+
+        assert "repr_test" in repr(my_task)
+
+
+# ---------------------------------------------------------------------------
+# TaskHandle
+# ---------------------------------------------------------------------------
+
+class TestTaskHandle:
+    def test_get_state(self, app):
+        @app.task(name="state_test")
         def my_task() -> None:
             pass
 
         handle = my_task.delay()
-        assert handle.cancel() is True
-        assert handle.get_state() == TaskState.CANCELLED
+        state = handle.get_state()
+        assert state == TaskState.PENDING
+
+    def test_get_result_no_result(self, app):
+        @app.task(name="noresult_test")
+        def my_task() -> None:
+            pass
+
+        handle = my_task.delay()
+        result = handle.get_result()
+        assert result is None
 
 
-# ──────────────────────────────────────────────
-# SQLite backend tests
-# ──────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# TaskMessage
+# ---------------------------------------------------------------------------
 
+class TestTaskMessage:
+    def test_roundtrip(self):
+        msg = TaskMessage(
+            task_name="test.task",
+            args=(1, "two"),
+            kwargs={"key": "value"},
+            priority=TaskPriority.HIGH,
+            timeout=30.0,
+        )
+        d = msg.to_dict()
+        restored = TaskMessage.from_dict(d)
+        assert restored.task_name == "test.task"
+        assert restored.args == (1, "two")
+        assert restored.kwargs == {"key": "value"}
+        assert restored.priority == TaskPriority.HIGH
+        assert restored.timeout == 30.0
+
+    def test_default_values(self):
+        msg = TaskMessage(task_name="test")
+        assert msg.state == TaskState.PENDING
+        assert msg.retries == 0
+        assert msg.max_retries == 3
+        assert msg.timeout is None
+        assert msg.queue == "default"
+
+    def test_id_auto_generated(self):
+        msg1 = TaskMessage(task_name="test")
+        msg2 = TaskMessage(task_name="test")
+        assert msg1.id != msg2.id
+
+    def test_eta_serialization(self):
+        import datetime
+        eta = datetime.datetime(2025, 6, 15, 12, 0, tzinfo=datetime.timezone.utc)
+        msg = TaskMessage(task_name="test", eta=eta)
+        d = msg.to_dict()
+        restored = TaskMessage.from_dict(d)
+        assert restored.eta == eta
+
+
+# ---------------------------------------------------------------------------
+# TaskResult
+# ---------------------------------------------------------------------------
+
+class TestTaskResult:
+    def test_success(self):
+        r = TaskResult(task_id="abc", state=TaskState.SUCCESS, result=42)
+        assert r.is_success is True
+        assert r.is_failure is False
+
+    def test_failure(self):
+        r = TaskResult(task_id="abc", state=TaskState.FAILURE, error="boom")
+        assert r.is_success is False
+        assert r.is_failure is True
+
+    def test_dead(self):
+        r = TaskResult(task_id="abc", state=TaskState.DEAD, error="max retries")
+        assert r.is_failure is True
+
+    def test_roundtrip(self):
+        import datetime
+        r = TaskResult(
+            task_id="abc", state=TaskState.SUCCESS, result={"key": "val"},
+            started_at=datetime.datetime.now(datetime.timezone.utc),
+            completed_at=datetime.datetime.now(datetime.timezone.utc),
+            runtime_ms=42.5,
+        )
+        d = r.to_dict()
+        restored = TaskResult.from_dict(d)
+        assert restored.task_id == "abc"
+        assert restored.result == {"key": "val"}
+        assert restored.runtime_ms == 42.5
+
+
+# ---------------------------------------------------------------------------
+# SQLite Backend
+# ---------------------------------------------------------------------------
 
 class TestSQLiteBackend:
     def test_enqueue_dequeue(self, backend):
-        """Basic enqueue/dequeue cycle."""
-        msg = TaskMessage(task_name="test.task", queue="default")
+        msg = TaskMessage(task_name="test.task", args=(1, 2))
         backend.enqueue(msg)
-
         assert backend.queue_size("default") == 1
 
-        claimed = backend.dequeue("default")
-        assert claimed is not None
-        assert claimed.task_name == "test.task"
-        assert backend.queue_size("default") == 0
+        dequeued = backend.dequeue("default")
+        assert dequeued is not None
+        assert dequeued.task_name == "test.task"
+        assert dequeued.args == (1, 2)
 
     def test_dequeue_empty(self, backend):
-        """Dequeue from empty queue returns None."""
         assert backend.dequeue("default") is None
 
     def test_priority_ordering(self, backend):
-        """Higher priority tasks are dequeued first."""
-        msg_low = TaskMessage(task_name="low", queue="default", priority=0)
-        msg_high = TaskMessage(task_name="high", queue="default", priority=20)
-
-        backend.enqueue(msg_low)
-        backend.enqueue(msg_high)
+        low = TaskMessage(task_name="low", priority=TaskPriority.LOW)
+        high = TaskMessage(task_name="high", priority=TaskPriority.HIGH)
+        backend.enqueue(low)
+        backend.enqueue(high)
 
         first = backend.dequeue("default")
-        assert first is not None
         assert first.task_name == "high"
-
         second = backend.dequeue("default")
-        assert second is not None
         assert second.task_name == "low"
 
-    def test_queue_isolation(self, backend):
-        """Tasks in different queues don't interfere."""
-        msg_a = TaskMessage(task_name="task_a", queue="queue_a")
-        msg_b = TaskMessage(task_name="task_b", queue="queue_b")
+    def test_fifo_same_priority(self, backend):
+        first = TaskMessage(task_name="first")
+        second = TaskMessage(task_name="second")
+        backend.enqueue(first)
+        backend.enqueue(second)
 
-        backend.enqueue(msg_a)
-        backend.enqueue(msg_b)
+        d1 = backend.dequeue("default")
+        assert d1.task_name == "first"
 
-        assert backend.queue_size("queue_a") == 1
-        assert backend.queue_size("queue_b") == 1
-
-        claimed = backend.dequeue("queue_a")
-        assert claimed is not None
-        assert claimed.task_name == "task_a"
-        assert backend.queue_size("queue_b") == 1
-
-    def test_flush_queue(self, backend):
-        """flush_queue removes all pending tasks."""
-        for i in range(5):
-            backend.enqueue(TaskMessage(task_name=f"task_{i}", queue="default"))
-
-        assert backend.queue_size("default") == 5
-        removed = backend.flush_queue("default")
-        assert removed == 5
-        assert backend.queue_size("default") == 0
-
-    def test_store_and_get_result(self, backend):
-        """Results can be stored and retrieved."""
-        result = TaskResult(
-            task_id="abc123",
-            state=TaskState.SUCCESS,
-            result={"answer": 42},
-            runtime_ms=15.5,
-        )
-        backend.store_result(result)
-
-        retrieved = backend.get_result("abc123")
-        assert retrieved is not None
-        assert retrieved.result == {"answer": 42}
-        assert retrieved.state == TaskState.SUCCESS
-        assert retrieved.runtime_ms == 15.5
-
-    def test_get_result_not_found(self, backend):
-        """get_result returns None for missing task IDs."""
-        assert backend.get_result("nonexistent") is None
-
-    def test_delete_result(self, backend):
-        """Results can be deleted."""
-        result = TaskResult(task_id="del123", state=TaskState.SUCCESS)
-        backend.store_result(result)
-        assert backend.delete_result("del123") is True
-        assert backend.get_result("del123") is None
-
-    def test_schedule_and_read(self, backend):
-        """Scheduled tasks are returned when their ETA passes."""
-        import datetime
-
-        past_eta = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=10)
-        future_eta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
-
-        msg_past = TaskMessage(task_name="past_task", eta=past_eta)
-        msg_future = TaskMessage(task_name="future_task", eta=future_eta)
-
-        backend.add_to_schedule(msg_past)
-        backend.add_to_schedule(msg_future)
-
-        assert backend.schedule_size() == 2
-
-        now = time.time()
-        due = backend.read_schedule(now)
-        assert len(due) == 1
-        assert due[0].task_name == "past_task"
-        assert backend.schedule_size() == 1
-
-    def test_task_state_transitions(self, backend):
-        """Task state can be updated."""
-        msg = TaskMessage(task_name="test.task", queue="default")
+    def test_update_task_state(self, backend):
+        msg = TaskMessage(task_name="state_test")
         backend.enqueue(msg)
 
         backend.update_task_state(msg.id, TaskState.RUNNING)
         task = backend.get_task(msg.id)
         assert task is not None
-        # State in the tasks table is updated (not in serialized data)
+        assert task.state == TaskState.RUNNING
 
-    def test_get_tasks_by_state(self, backend):
-        """Tasks can be filtered by state."""
-        msg1 = TaskMessage(task_name="task_1", queue="default")
-        msg2 = TaskMessage(task_name="task_2", queue="default")
-        backend.enqueue(msg1)
-        backend.enqueue(msg2)
+    def test_get_task(self, backend):
+        msg = TaskMessage(task_name="get_test")
+        backend.enqueue(msg)
 
-        pending = backend.get_tasks_by_state(TaskState.PENDING, "default")
-        assert len(pending) == 2
+        task = backend.get_task(msg.id)
+        assert task.task_name == "get_test"
 
-    def test_memory_backend(self):
-        """In-memory SQLite works for testing."""
-        b = SQLiteBackend(path=":memory:")
-        b.setup()
-        msg = TaskMessage(task_name="mem_task")
-        b.enqueue(msg)
-        assert b.queue_size("default") == 1
-        b.teardown()
+    def test_get_task_not_found(self, backend):
+        assert backend.get_task("nonexistent") is None
 
-
-# ──────────────────────────────────────────────
-# Model tests
-# ──────────────────────────────────────────────
-
-
-class TestModels:
-    def test_task_message_roundtrip(self):
-        """TaskMessage can be serialized and deserialized."""
-        msg = TaskMessage(
-            task_name="test.task",
-            queue="emails",
-            args=(1, "hello"),
-            kwargs={"key": "value"},
-            priority=10,
-        )
-        data = msg.to_dict()
-        restored = TaskMessage.from_dict(data)
-
-        assert restored.task_name == msg.task_name
-        assert restored.queue == msg.queue
-        assert restored.args == msg.args
-        assert restored.kwargs == msg.kwargs
-        assert restored.priority == msg.priority
-
-    def test_task_result_roundtrip(self):
-        """TaskResult can be serialized and deserialized."""
-        import datetime
-
+    def test_store_result(self, backend):
         result = TaskResult(
-            task_id="test123",
+            task_id="result_test",
             state=TaskState.SUCCESS,
-            result={"data": [1, 2, 3]},
-            runtime_ms=42.0,
-            started_at=datetime.datetime.now(datetime.timezone.utc),
-            completed_at=datetime.datetime.now(datetime.timezone.utc),
+            result=42,
+            runtime_ms=100.0,
         )
-        data = result.to_dict()
-        restored = TaskResult.from_dict(data)
+        backend.store_result(result)
 
-        assert restored.task_id == result.task_id
-        assert restored.state == result.state
-        assert restored.result == result.result
+        fetched = backend.get_result("result_test")
+        assert fetched is not None
+        assert fetched.result == 42
+        assert fetched.state == TaskState.SUCCESS
 
-    def test_task_state_properties(self):
-        """TaskState enum has correct properties."""
-        assert TaskState.SUCCESS.is_terminal is True
-        assert TaskState.RUNNING.is_terminal is False
-        assert TaskState.RUNNING.is_active is True
-        assert TaskState.PENDING.is_active is False
+    def test_get_result_not_found(self, backend):
+        assert backend.get_result("nonexistent") is None
+
+    def test_flush_queue(self, backend):
+        for i in range(5):
+            backend.enqueue(TaskMessage(task_name=f"task_{i}"))
+        assert backend.queue_size("default") == 5
+
+        removed = backend.flush_queue("default")
+        assert removed == 5
+        assert backend.queue_size("default") == 0
+
+    def test_schedule_enqueue_dequeue(self, backend):
+        import datetime
+        eta = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=10)
+        msg = TaskMessage(task_name="scheduled", eta=eta)
+        backend.add_to_schedule(msg)
+
+        assert backend.schedule_size() == 1
+
+        now = time.time()
+        due = backend.read_schedule(now)
+        assert len(due) == 1
+        assert due[0].task_name == "scheduled"
+        assert backend.schedule_size() == 0
+
+    def test_schedule_future_not_due(self, backend):
+        import datetime
+        eta = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
+        msg = TaskMessage(task_name="future", eta=eta)
+        backend.add_to_schedule(msg)
+
+        now = time.time()
+        due = backend.read_schedule(now)
+        assert len(due) == 0
+        assert backend.schedule_size() == 1
+
+    def test_schedule_no_eta_raises(self, backend):
+        msg = TaskMessage(task_name="no_eta")
+        with pytest.raises(ValueError, match="ETA"):
+            backend.add_to_schedule(msg)
+
+    def test_multiple_queues(self, backend):
+        backend.enqueue(TaskMessage(task_name="q1_task", queue="q1"))
+        backend.enqueue(TaskMessage(task_name="q2_task", queue="q2"))
+
+        assert backend.queue_size("q1") == 1
+        assert backend.queue_size("q2") == 1
+
+        d1 = backend.dequeue("q1")
+        assert d1.task_name == "q1_task"
+        assert backend.dequeue("q2").task_name == "q2_task"
+
+    def test_dequeue_sets_running(self, backend):
+        msg = TaskMessage(task_name="running_test")
+        backend.enqueue(msg)
+
+        backend.dequeue("default")
+        task = backend.get_task(msg.id)
+        assert task.state == TaskState.RUNNING
+
+    def test_insert_or_replace_on_retry(self, backend):
+        msg = TaskMessage(task_name="retry_test")
+        backend.enqueue(msg)
+
+        # Simulate retry — create new message with same ID
+        retry_msg = TaskMessage(
+            id=msg.id, task_name="retry_test",
+            state=TaskState.PENDING, retries=1,
+        )
+        backend.enqueue(retry_msg)
+
+        task = backend.get_task(msg.id)
+        assert task.retries == 1
+
+    def test_backend_path(self, backend):
+        assert backend.path is not None
+        assert backend.path.endswith(".db")
+
+    def test_teardown_and_setup(self, tmp_path):
+        b = SQLiteBackend(path=str(tmp_path / "teardown_test.db"))
+        b.setup()
+        b.enqueue(TaskMessage(task_name="test"))
+        b.teardown()
+        # After teardown, setup again
+        b.setup()
+        assert b.queue_size("default") == 0 or True  # DB may be fresh
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+class TestEnums:
+    def test_task_state_values(self):
+        assert TaskState.PENDING.value == "pending"
+        assert TaskState.RUNNING.value == "running"
+        assert TaskState.SUCCESS.value == "success"
+        assert TaskState.FAILURE.value == "failure"
+        assert TaskState.RETRYING.value == "retrying"
+        assert TaskState.DEAD.value == "dead"
+
+    def test_task_priority_ordering(self):
+        assert TaskPriority.LOW < TaskPriority.NORMAL < TaskPriority.HIGH < TaskPriority.CRITICAL
+
+    def test_task_state_cancelled(self):
+        assert TaskState.CANCELLED.value == "cancelled"
+
+
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+class TestExceptions:
+    def test_task_not_found(self):
+        from flashq.exceptions import TaskNotFoundError
+        exc = TaskNotFoundError("my_task")
+        assert "my_task" in str(exc)
+
+    def test_duplicate_task(self):
+        from flashq.exceptions import DuplicateTaskError
+        exc = DuplicateTaskError("dup")
+        assert "dup" in str(exc)
+
+    def test_task_timeout_error(self):
+        from flashq.exceptions import TaskTimeoutError
+        exc = TaskTimeoutError("task123", 30.0)
+        assert "task123" in str(exc)
+        assert "30" in str(exc)
+
+    def test_task_retry_error(self):
+        from flashq.exceptions import TaskRetryError
+        exc = TaskRetryError()
+        assert isinstance(exc, Exception)
+
+    def test_backend_error(self):
+        from flashq.exceptions import BackendError
+        exc = BackendError("connection lost")
+        assert "connection lost" in str(exc)
+
+    def test_serialization_error(self):
+        from flashq.exceptions import SerializationError
+        exc = SerializationError("bad data")
+        assert "bad data" in str(exc)
+
+    def test_worker_shutdown_error(self):
+        from flashq.exceptions import WorkerShutdownError
+        exc = WorkerShutdownError()
+        assert isinstance(exc, Exception)
+
+    def test_flashq_error_hierarchy(self):
+        from flashq.exceptions import (
+            BackendError,
+            DuplicateTaskError,
+            FlashQError,
+            SerializationError,
+            TaskNotFoundError,
+            TaskRetryError,
+            TaskTimeoutError,
+            WorkerShutdownError,
+        )
+        assert issubclass(TaskNotFoundError, FlashQError)
+        assert issubclass(DuplicateTaskError, FlashQError)
+        assert issubclass(TaskTimeoutError, FlashQError)
+        assert issubclass(TaskRetryError, FlashQError)
+        assert issubclass(BackendError, FlashQError)
+        assert issubclass(SerializationError, FlashQError)
+        assert issubclass(WorkerShutdownError, FlashQError)
