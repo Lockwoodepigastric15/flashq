@@ -21,7 +21,7 @@ from typing import (
     TypeVar,
 )
 
-from typing_extensions import ParamSpec
+from typing import ParamSpec
 
 from flashq.enums import TaskPriority, TaskState
 from flashq.models import TaskMessage, TaskResult

@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
-from typing_extensions import ParamSpec
+from typing import ParamSpec
 
 from flashq.enums import TaskPriority
 from flashq.exceptions import DuplicateTaskError, TaskNotFoundError

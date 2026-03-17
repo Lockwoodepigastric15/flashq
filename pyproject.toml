@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flashq"
-version = "0.2.0"
+version = "0.2.1"
 description = "The task queue that works out of the box — no Redis, no RabbitMQ, just pip install and go."
 readme = "README.md"
 license = "MIT"
