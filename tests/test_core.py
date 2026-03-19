@@ -144,8 +144,9 @@ class TestTask:
             pass
 
         my_task.apply(countdown=60)
-        assert app.backend.queue_size("default") == 0
-        assert app.backend.schedule_size() == 1
+        # Task goes to queue with eta; dequeue filters by eta
+        assert app.backend.queue_size("default") == 1
+        assert app.backend.schedule_size() == 0
 
     def test_apply_eta(self, app):
         import datetime
@@ -157,7 +158,9 @@ class TestTask:
             pass
 
         my_task.apply(eta=future)
-        assert app.backend.schedule_size() == 1
+        # Task goes to queue with eta; dequeue filters by eta
+        assert app.backend.queue_size("default") == 1
+        assert app.backend.schedule_size() == 0
 
     def test_task_name_auto(self, app):
         @app.task()

@@ -243,8 +243,9 @@ class TestWorkerSchedule:
 
         deferred_task.apply(countdown=0.1)
 
-        assert backend.queue_size("default") == 0
-        assert backend.schedule_size() == 1
+        # Task goes to queue with eta; dequeue filters by eta
+        assert backend.queue_size("default") == 1
+        assert backend.schedule_size() == 0
 
         _run_worker(app, duration=3, schedule_interval=0.3)
 

@@ -248,12 +248,11 @@ class Task(Generic[P, R]):
             result_ttl=self.result_ttl,
         )
 
-        # Route to schedule or queue
+        # Route to queue (dequeue already filters by eta)
+        self.app.backend.enqueue(message)
         if message.eta is not None:
-            self.app.backend.add_to_schedule(message)
-            logger.info("Scheduled task %s (%s) for %s", message.id, self.name, message.eta)
+            logger.info("Enqueued task %s (%s) with eta %s", message.id, self.name, message.eta)
         else:
-            self.app.backend.enqueue(message)
             logger.info("Enqueued task %s (%s)", message.id, self.name)
 
         return TaskHandle(message.id, self.app)

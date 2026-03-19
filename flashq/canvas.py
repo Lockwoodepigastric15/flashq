@@ -130,17 +130,15 @@ class Chain:
         chain_id = str(uuid.uuid4())
 
         # Enqueue the first task
-        first = self.signatures[0]
-        msg = TaskMessage(
-            task_name=first.task_name,
-            args=first.args,
-            kwargs=first.kwargs,
-            queue=first.options.get("queue", "default"),
-            priority=first.options.get("priority", 0),
-        )
+        first_task_id = self.signatures[0].apply(app)
 
-        app.backend.enqueue(msg)
-        return ChainHandle(chain_id=chain_id, app=app, total=len(self.signatures))
+        return ChainHandle(
+            chain_id=chain_id,
+            app=app,
+            task_ids=[first_task_id],
+            remaining_signatures=list(self.signatures[1:]),
+            total=len(self.signatures),
+        )
 
 
 @dataclass
@@ -149,7 +147,49 @@ class ChainHandle:
 
     chain_id: str
     app: FlashQ
+    task_ids: list[str]
+    remaining_signatures: list[Signature]
     total: int
+
+    def get_result(self, timeout: float = 30.0) -> Any:
+        """Wait for the chain to complete and return the final result.
+
+        Polls each task in sequence, enqueuing the next task with the
+        previous result, until all tasks are done.
+        """
+        import time
+
+        start = time.monotonic()
+        current_task_id = self.task_ids[-1]
+        prev_result: Any = None
+
+        while True:
+            elapsed = time.monotonic() - start
+            if elapsed >= timeout:
+                raise TimeoutError(
+                    f"Chain {self.chain_id} did not complete within {timeout}s"
+                )
+
+            result = self.app.backend.get_result(current_task_id)
+            if result is not None and result.state in (
+                TaskState.SUCCESS,
+                TaskState.FAILURE,
+                TaskState.DEAD,
+            ):
+                if result.state != TaskState.SUCCESS:
+                    return None
+                prev_result = result.result
+
+                # If there are remaining signatures, enqueue the next one
+                if self.remaining_signatures:
+                    next_sig = self.remaining_signatures.pop(0)
+                    current_task_id = next_sig.apply(self.app, prev_result=prev_result)
+                    self.task_ids.append(current_task_id)
+                else:
+                    # All tasks done
+                    return prev_result
+
+            time.sleep(0.1)
 
 
 # ---------------------------------------------------------------------------

@@ -399,7 +399,7 @@ class Worker:
         )
 
         self.app.backend.update_task_state(message.id, TaskState.RETRYING)
-        self.app.backend.add_to_schedule(retry_message)
+        self.app.backend.enqueue(retry_message)
 
         # Notify middleware
         self.app.middleware.on_retry(message, exc or Exception("retry"), delay)
