@@ -166,9 +166,7 @@ class ChainHandle:
         while True:
             elapsed = time.monotonic() - start
             if elapsed >= timeout:
-                raise TimeoutError(
-                    f"Chain {self.chain_id} did not complete within {timeout}s"
-                )
+                raise TimeoutError(f"Chain {self.chain_id} did not complete within {timeout}s")
 
             result = self.app.backend.get_result(current_task_id)
             if result is not None and result.state in (
